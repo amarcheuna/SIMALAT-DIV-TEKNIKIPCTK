@@ -3,500 +3,553 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIMALAT Eksekutif - PT IPC Terminal Petikemas</title>
+    <title>SIMALAT · Sistem Manajemen Alat — PT IPC Terminal Petikemas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .tab-active { background-color: #0f172a; color: #ffffff; }
-        .tab-inactive { background-color: #f1f5f9; color: #475569; }
-        .tab-inactive:hover { background-color: #e2e8f0; }
+        /* ====== Gaya dasar ====== */
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f5f7fa; }
+        .num { font-variant-numeric: tabular-nums; }
+
+        /* Kelas yang dipakai app.js — JANGAN diganti namanya */
+        .tab-active { background-color: #0f172a; color: #ffffff; border-color: #0f172a; }
+        .tab-inactive { background-color: #ffffff; color: #475569; border-color: #e2e8f0; }
+        .tab-inactive:hover { background-color: #f1f5f9; color: #0f172a; }
+
+        /* Komponen */
+        .card { background: #fff; border: 1px solid #e5e9f0; border-radius: 14px; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+        .card-click { cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+        .card-click:hover { border-color: #93c5fd; box-shadow: 0 8px 24px -14px rgba(15,23,42,.35); transform: translateY(-1px); }
+        .card-click:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #64748b; }
+        .section-head { display: flex; align-items: baseline; gap: 10px; margin: 6px 2px 10px; }
+        .section-head .no { width: 22px; height: 22px; border-radius: 6px; background: #0f172a; color: #fbbf24; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; transform: translateY(3px); }
+        .section-head h2 { font-size: 15px; font-weight: 800; color: #0f172a; }
+        .section-head p { font-size: 12px; color: #64748b; }
+        .legend-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 11px; border: 1px solid #e5e9f0; border-radius: 10px; cursor: pointer; transition: background .15s, border-color .15s; }
+        .legend-row:hover { background: #f8fafc; border-color: #cbd5e1; }
+        .dot { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+        .control { padding: 7px 10px; font-size: 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; color: #0f172a; }
+        .control:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .field-label { display: block; font-size: 11px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+        .field { width: 100%; padding: 9px 11px; font-size: 13px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; color: #0f172a; }
+        .field:focus { outline: none; background: #fff; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        #tableBody tr:hover { background: #f8fbff; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased">
+<body class="text-slate-800 antialiased">
 
-    <!-- HALAMAN LOGIN -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md space-y-5">
-            <div class="text-center">
-                <div class="inline-flex bg-amber-400 text-slate-950 p-3.5 rounded-xl mb-3 shadow-md">
+    <!-- ================= HALAMAN LOGIN ================= -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-6">
+                <div class="inline-flex w-14 h-14 items-center justify-center bg-amber-400 text-slate-950 rounded-2xl shadow-lg mb-3">
                     <i class="fa-solid fa-anchor text-2xl"></i>
                 </div>
-                <h2 class="text-xl font-black text-slate-900 tracking-tight">SIMALAT IPC TPK</h2>
-                <p class="text-xs text-slate-500 mt-1">Sistem Informasi Manajemen & Peremajaan Alat (Basis 2026)</p>
+                <h1 class="text-2xl font-extrabold text-white tracking-tight">SIMALAT</h1>
+                <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Alat · PT IPC Terminal Petikemas</p>
             </div>
-            <div class="space-y-3.5">
+            <div class="bg-white p-6 rounded-2xl shadow-2xl space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Operasional</label>
-                    <input type="email" id="loginEmail" placeholder="amarcheuna@gmail.com" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 bg-slate-50">
+                    <label class="field-label" for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" autocomplete="username" placeholder="nama@perusahaan.co.id" class="field">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••••••" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 bg-slate-50">
+                    <label class="field-label" for="loginPassword">Kata sandi</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••" class="field"
+                           onkeydown="if(event.key==='Enter'){handleLogin()}">
                 </div>
-                <button onclick="handleLogin()" id="btnLoginSubmit" class="w-full bg-blue-950 hover:bg-blue-900 text-white py-2.5 rounded-lg text-xs font-bold transition cursor-pointer shadow-sm">
+                <button onclick="handleLogin()" id="btnLoginSubmit" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-xl text-sm font-bold transition cursor-pointer shadow-sm">
                     Masuk ke Dashboard
                 </button>
+                <p id="loginError" class="text-xs text-rose-600 text-center hidden font-medium"></p>
             </div>
-            <p id="loginError" class="text-xs text-rose-600 text-center hidden font-medium"></p>
+            <p class="text-center text-[11px] text-slate-500 mt-4">Viewer dapat melihat data · Admin &amp; Editor dapat mengubah data</p>
         </div>
     </div>
 
-    <!-- HALAMAN UTAMA APLIKASI -->
+    <!-- ================= HALAMAN UTAMA ================= -->
     <div id="appScreen" class="hidden min-h-screen flex flex-col">
-        <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 border-b border-slate-800">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-amber-400 text-slate-950 p-2 rounded-lg font-bold shadow-xs">
-                        <i class="fa-solid fa-anchor text-base"></i>
+
+        <!-- Header -->
+        <header class="bg-slate-950 text-white sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 h-14 flex justify-between items-center gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-anchor"></i>
                     </div>
-                    <div>
-                        <div class="flex items-center space-x-2">
-                            <h1 class="font-extrabold text-sm tracking-wide">SIMALAT · Sistem Manajemen Alat</h1>
-                            <span class="px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-300 rounded-full border border-slate-700">Tahun acuan 2026</span>
-                        </div>
-                        <p class="text-[11px] text-slate-400">PT IPC Terminal Petikemas — Tanjung Priok · Panjang · Jambi · Teluk Bayur · Palembang · Pontianak</p>
+                    <div class="min-w-0">
+                        <p class="font-extrabold text-sm leading-tight">SIMALAT <span class="font-medium text-amber-400">· Sistem Manajemen Alat</span></p>
+                        <p class="text-[11px] text-slate-400 truncate hidden sm:block">PT IPC Terminal Petikemas · usia alat dihitung per tahun 2026</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <div class="text-right">
-                        <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">HAK AKSES AKTIF</p>
-                        <div class="flex items-center justify-end space-x-1.5">
-                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                            <span id="roleBadge" class="text-xs font-bold text-amber-400 uppercase">ADMIN</span>
-                            <span class="text-[11px] text-slate-300 hidden sm:inline">· <span id="userEmailDisplay"></span></span>
-                        </div>
+                <div class="flex items-center gap-3">
+                    <div class="text-right leading-tight">
+                        <span id="roleBadge" class="inline-block text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-400 text-slate-950">ADMIN</span>
+                        <p class="text-[11px] text-slate-400 hidden sm:block mt-0.5"><span id="userEmailDisplay"></span></p>
                     </div>
-                    <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer">
-                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                    <button onclick="handleLogout()" class="text-slate-300 hover:text-white hover:bg-white/10 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer" title="Keluar">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i><span class="hidden sm:inline">Keluar</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <div class="bg-white border-b border-slate-200 shadow-2xs">
+        <!-- Toolbar: cabang + aksi -->
+        <div class="bg-white border-b border-slate-200 sticky top-14 z-30">
             <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
-                <div class="flex flex-wrap items-center gap-1.5" id="branchTabs"></div>
-                <div class="flex items-center space-x-2">
-                    <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
-                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel
-                    </button>
-                    <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition">CSV</button>
-                    <button id="btnAddTop" onclick="openModal()" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="eyebrow hidden md:inline">Cabang</span>
+                    <div class="flex flex-wrap items-center gap-1.5" id="branchTabs"></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnAddTop" onclick="openModal()" class="hidden flex bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold items-center cursor-pointer transition">
                         <i class="fa-solid fa-plus mr-1.5"></i> Tambah Alat
                     </button>
+                    <button onclick="exportExcel(this)" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel
+                    </button>
+                    <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-600 border border-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition" title="Unduh CSV (data mentah)">CSV</button>
                 </div>
             </div>
         </div>
 
-        <main class="max-w-7xl mx-auto px-4 py-4 space-y-4 flex-1 w-full">
-            <div class="bg-blue-50/80 border border-blue-200/80 rounded-xl px-4 py-2.5 flex flex-wrap justify-between items-center gap-2 text-xs">
-                <div class="flex items-center space-x-2 text-blue-950">
-                    <i class="fa-solid fa-user-shield text-blue-700"></i>
+        <main class="max-w-7xl mx-auto px-4 py-5 space-y-7 flex-1 w-full">
+
+            <!-- Info peran & cakupan -->
+            <div class="card px-4 py-2.5 flex flex-wrap justify-between items-center gap-2 text-xs">
+                <div class="flex items-center gap-2 text-slate-700">
+                    <i class="fa-solid fa-user-shield text-blue-600"></i>
                     <span id="modeBannerText"><b>Mode Admin:</b> akses penuh untuk menambah, mengedit dan menghapus data alat.</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <label class="inline-flex items-center space-x-1.5 text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                    <label class="inline-flex items-center gap-1.5 text-[11px] text-slate-600 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
                         <input type="checkbox" id="chkIncludePassive" onchange="onTogglePassive()" class="rounded text-blue-600">
-                        <span>Sertakan Chassis & Spreader (211 unit)</span>
+                        <span>Sertakan Chassis &amp; Spreader</span>
                     </label>
-                    <span id="scopeSummaryBadge" class="bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-700 shadow-2xs">Seluruh 6 terminal · 154 unit</span>
+                    <span id="scopeSummaryBadge" class="bg-slate-900 text-white px-2.5 py-1 rounded-lg text-[11px] font-semibold num">Seluruh 6 terminal · 154 unit</span>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center text-[11px] text-slate-400 px-0.5">
-                <span><b class="text-slate-600 uppercase tracking-wider">KATEGORI ALAT</b> · klik kartu untuk memfilter tabel</span>
-                <span id="totalAlatLabel" class="font-semibold text-slate-500">Total 154 alat</span>
-            </div>
+            <!-- ============ 1. RINGKASAN ARMADA ============ -->
+            <section>
+                <div class="section-head flex-wrap">
+                    <span class="no">1</span>
+                    <h2>Ringkasan Armada</h2>
+                    <p>Jumlah alat per kategori · klik kartu untuk memfilter tabel</p>
+                    <span id="totalAlatLabel" class="ml-auto text-xs font-bold text-slate-700 num">Total 154 alat</span>
+                </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div onclick="filterByCategory('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT UTAMA DERMAGA</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiDermaga" class="text-3xl font-black text-slate-900">0</h3>
-                                <span id="kpiDermagaPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
-                            </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div onclick="filterByCategory('Alat Utama Dermaga')" role="button" tabindex="0" class="card card-click p-4 border-l-4 !border-l-blue-900">
+                        <div class="flex justify-between items-start">
+                            <p class="eyebrow">Alat Utama Dermaga</p>
+                            <i class="fa-solid fa-anchor text-blue-900/70"></i>
                         </div>
-                        <div class="p-2.5 bg-blue-50 text-blue-800 rounded-xl"><i class="fa-solid fa-anchor text-base"></i></div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <h3 id="kpiDermaga" class="text-3xl font-extrabold text-slate-900 num">0</h3>
+                            <span id="kpiDermagaPct" class="text-xs font-medium text-slate-400 num">unit · 0%</span>
+                        </div>
+                        <p id="subDermaga" class="text-[11px] text-slate-500 truncate mt-2">QCC · GLC · FJC · GJC</p>
+                        <p id="opsDermaga" class="text-[11px] font-semibold text-emerald-700 mt-0.5 num">0 operasional</p>
                     </div>
-                    <div class="mt-3 pt-2 border-t border-slate-100">
-                        <p id="subDermaga" class="text-[10px] text-slate-400 truncate">QCC · GLC · FJC · GJC</p>
-                        <div class="flex justify-between items-center text-[11px] mt-0.5">
-                            <span id="opsDermaga" class="font-semibold text-slate-700">0 operasional</span>
-                            <span class="text-blue-600 font-semibold">Filter →</span>
+
+                    <div onclick="filterByCategory('Alat Utama Lapangan')" role="button" tabindex="0" class="card card-click p-4 border-l-4 !border-l-blue-500">
+                        <div class="flex justify-between items-start">
+                            <p class="eyebrow">Alat Utama Lapangan</p>
+                            <i class="fa-solid fa-cubes-stacked text-blue-500/80"></i>
                         </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <h3 id="kpiLapangan" class="text-3xl font-extrabold text-slate-900 num">0</h3>
+                            <span id="kpiLapanganPct" class="text-xs font-medium text-slate-400 num">unit · 0%</span>
+                        </div>
+                        <p id="subLapangan" class="text-[11px] text-slate-500 truncate mt-2">RTG · RMGC</p>
+                        <p id="opsLapangan" class="text-[11px] font-semibold text-emerald-700 mt-0.5 num">0 operasional</p>
+                    </div>
+
+                    <div onclick="filterByCategory('Alat Pendukung')" role="button" tabindex="0" class="card card-click p-4 border-l-4 !border-l-slate-400">
+                        <div class="flex justify-between items-start">
+                            <p class="eyebrow">Alat Pendukung</p>
+                            <i class="fa-solid fa-screwdriver-wrench text-slate-400"></i>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <h3 id="kpiPendukung" class="text-3xl font-extrabold text-slate-900 num">0</h3>
+                            <span id="kpiPendukungPct" class="text-xs font-medium text-slate-400 num">unit · 0%</span>
+                        </div>
+                        <p id="subPendukung" class="text-[11px] text-slate-500 truncate mt-2">RST · FLT · SIL</p>
+                        <p id="opsPendukung" class="text-[11px] font-semibold text-emerald-700 mt-0.5 num">0 operasional</p>
+                    </div>
+
+                    <div onclick="filterByCategory('Alat Angkut')" role="button" tabindex="0" class="card card-click p-4 border-l-4 !border-l-teal-700">
+                        <div class="flex justify-between items-start">
+                            <p class="eyebrow">Alat Angkut</p>
+                            <i class="fa-solid fa-truck-front text-teal-700/80"></i>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mt-2">
+                            <h3 id="kpiAngkut" class="text-3xl font-extrabold text-slate-900 num">0</h3>
+                            <span id="kpiAngkutPct" class="text-xs font-medium text-slate-400 num">unit · 0%</span>
+                        </div>
+                        <p id="subAngkut" class="text-[11px] text-slate-500 truncate mt-2">HDT · TTR</p>
+                        <p id="opsAngkut" class="text-[11px] font-semibold text-emerald-700 mt-0.5 num">0 operasional</p>
                     </div>
                 </div>
 
-                <div onclick="filterByCategory('Alat Utama Lapangan')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-indigo-400 cursor-pointer transition flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
+                <!-- Sumber energi: strip ringkas selebar halaman -->
+                <div class="card mt-3 p-4 sm:p-5 grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-center">
+                    <div class="md:col-span-3 flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-xl bg-orange-50 text-orange-700 flex items-center justify-center shrink-0"><i class="fa-solid fa-gas-pump"></i></div>
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT UTAMA LAPANGAN</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiLapangan" class="text-3xl font-black text-slate-900">0</h3>
-                                <span id="kpiLapanganPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
+                            <p class="eyebrow">Sumber Energi</p>
+                            <div class="flex items-baseline gap-1.5 mt-0.5">
+                                <h3 id="kpiEnergiBBM" class="text-3xl font-extrabold text-orange-700 num leading-none">0</h3>
+                                <span id="kpiEnergiBBMPct" class="text-xs font-medium text-slate-500 num">alat BBM · 0%</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl"><i class="fa-solid fa-cubes-stacked text-base"></i></div>
                     </div>
-                    <div class="mt-3 pt-2 border-t border-slate-100">
-                        <p id="subLapangan" class="text-[10px] text-slate-400 truncate">RTG · RMGC</p>
-                        <div class="flex justify-between items-center text-[11px] mt-0.5">
-                            <span id="opsLapangan" class="font-semibold text-slate-700">0 operasional</span>
-                            <span class="text-indigo-600 font-semibold">Filter →</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div onclick="filterByCategory('Alat Pendukung')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-slate-400 cursor-pointer transition flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT PENDUKUNG</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiPendukung" class="text-3xl font-black text-slate-900">0</h3>
-                                <span id="kpiPendukungPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 bg-slate-100 text-slate-700 rounded-xl"><i class="fa-solid fa-screwdriver-wrench text-base"></i></div>
-                    </div>
-                    <div class="mt-3 pt-2 border-t border-slate-100">
-                        <p id="subPendukung" class="text-[10px] text-slate-400 truncate">RST · FLT · SIL</p>
-                        <div class="flex justify-between items-center text-[11px] mt-0.5">
-                            <span id="opsPendukung" class="font-semibold text-slate-700">0 operasional</span>
-                            <span class="text-slate-600 font-semibold">Filter →</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div onclick="filterByCategory('Alat Angkut')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-teal-400 cursor-pointer transition flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT ANGKUT</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiAngkut" class="text-3xl font-black text-slate-900">0</h3>
-                                <span id="kpiAngkutPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 bg-teal-50 text-teal-700 rounded-xl"><i class="fa-solid fa-truck-front text-base"></i></div>
-                    </div>
-                    <div class="mt-3 pt-2 border-t border-slate-100">
-                        <p id="subAngkut" class="text-[10px] text-slate-400 truncate">HDT · TTR</p>
-                        <div class="flex justify-between items-center text-[11px] mt-0.5">
-                            <span id="opsAngkut" class="font-semibold text-slate-700">0 operasional</span>
-                            <span class="text-teal-700 font-semibold">Filter →</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">STATUS OPERASIONAL</p>
-                            <div class="flex items-center space-x-2 mt-1">
-                                <h3 id="kpiOperasional" class="text-3xl font-black text-emerald-600">0</h3>
-                                <span id="kpiOpsPct" class="px-2 py-0.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 rounded-full">0% siap</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-base"></i></div>
-                    </div>
-                    <div class="mt-3">
-                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                            <div id="opsProgressBar" class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-medium">
-                            <span id="kpiNonOps" class="text-rose-600">● Non-ops 0</span>
-                            <span id="kpiBelumIsi">● Belum diisi 0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RATA-RATA USIA ALAT</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiRataUsia" class="text-3xl font-black text-slate-900">0</h3>
-                                <span class="text-xs font-medium text-slate-400">tahun</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-hourglass-half text-base"></i></div>
-                    </div>
-                    <p id="kpiTertua" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 truncate">Tertua: -</p>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiEnergiBBM" class="text-3xl font-black text-orange-600">0</h3>
-                                <span id="kpiEnergiBBMPct" class="text-xs font-medium text-slate-500">alat BBM · 0%</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-base"></i></div>
-                    </div>
-                    <div class="mt-3">
-                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
-                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%"></div>
-                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%"></div>
-                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%"></div>
+                    <div class="md:col-span-5">
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
+                            <div id="barBBM" class="bg-orange-600 h-full" style="width: 0%"></div>
+                            <div id="barListrik" class="bg-sky-600 h-full" style="width: 0%"></div>
+                            <div id="barHybrid" class="bg-violet-600 h-full" style="width: 0%"></div>
                             <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%"></div>
                         </div>
-                        <div class="flex flex-wrap justify-between text-[10px] font-semibold mt-1.5">
-                            <button onclick="filterByEnergy('Listrik')" class="text-emerald-600 hover:underline cursor-pointer">● Listrik <span id="cntListrik">0</span></button>
-                            <button onclick="filterByEnergy('Hybrid')" class="text-purple-600 hover:underline cursor-pointer">● Hybrid <span id="cntHybrid">0</span></button>
-                            <button onclick="filterByEnergy('Belum Diisi')" class="text-slate-500 hover:underline cursor-pointer">● Belum Diisi <span id="cntEnergiEmpty">0</span></button>
-                        </div>
+                        <p class="text-[11px] text-slate-500 mt-2">Proporsi sumber energi penggerak seluruh alat dalam cakupan</p>
+                    </div>
+                    <div class="md:col-span-4 grid grid-cols-3 gap-2">
+                        <button onclick="filterByEnergy('Listrik')" class="rounded-xl border border-slate-200 hover:border-sky-400 hover:bg-sky-50/50 px-3 py-2 text-left cursor-pointer transition">
+                            <span class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500"><span class="dot bg-sky-600"></span>Listrik</span>
+                            <span id="cntListrik" class="block text-lg font-extrabold text-slate-900 num">0</span>
+                        </button>
+                        <button onclick="filterByEnergy('Hybrid')" class="rounded-xl border border-slate-200 hover:border-violet-400 hover:bg-violet-50/50 px-3 py-2 text-left cursor-pointer transition">
+                            <span class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500"><span class="dot bg-violet-600"></span>Hybrid</span>
+                            <span id="cntHybrid" class="block text-lg font-extrabold text-slate-900 num">0</span>
+                        </button>
+                        <button onclick="filterByEnergy('Belum Diisi')" class="rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 px-3 py-2 text-left cursor-pointer transition">
+                            <span class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500"><span class="dot bg-slate-300"></span>Belum diisi</span>
+                            <span id="cntEnergiEmpty" class="block text-lg font-extrabold text-slate-900 num">0</span>
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-7 flex flex-col justify-between">
-                    <div>
+                <!-- Elemen tersembunyi: tetap ada karena masih diisi oleh app.js (kartu Kesiapan & Rata-rata Usia sudah tidak ditampilkan) -->
+                <div class="hidden" aria-hidden="true">
+                    <span id="kpiOperasional"></span><span id="kpiOpsPct"></span><div id="opsProgressBar"></div>
+                    <span id="kpiNonOps"></span><span id="kpiBelumIsi"></span>
+                    <span id="kpiRataUsia"></span><span id="kpiTertua"></span>
+                </div>
+            </section>
+
+            <!-- ============ 2. SEBARAN & USIA ============ -->
+            <section>
+                <div class="section-head flex-wrap">
+                    <span class="no">2</span>
+                    <h2>Sebaran Armada &amp; Usia Alat</h2>
+                    <p>Di mana alat berada dan berapa yang perlu diprioritaskan peremajaan</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                    <div class="card p-5 lg:col-span-7 flex flex-col">
                         <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
                             <div>
-                                <h3 class="font-bold text-slate-900 text-sm">Sebaran Armada per Cabang & Kategori</h3>
-                                <p class="text-[11px] text-slate-400">Total unit tampil di atas setiap batang · klik batang untuk memfilter</p>
+                                <h3 class="font-bold text-slate-900 text-sm">Jumlah alat per cabang &amp; kategori</h3>
+                                <p class="text-[11px] text-slate-500">Angka di atas batang = total unit · klik batang untuk memfilter</p>
                             </div>
                             <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-[11px] font-semibold">
-                                <button id="btnModeSemua" onclick="setChartMode('semua')" class="px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer transition">Semua armada</button>
+                                <button id="btnModeSemua" onclick="setChartMode('semua')" class="px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-sm cursor-pointer transition">Semua armada</button>
                                 <button id="btnModeUtama" onclick="setChartMode('utama')" class="px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 cursor-pointer transition">Alat utama saja</button>
                             </div>
                         </div>
-                        <div class="relative h-72 w-full"><canvas id="terminalChart"></canvas></div>
-                    </div>
-                    <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
-                        <span>Sumber: database alat (seluruh terminal)</span>
-                        <span id="chartTotalFooter" class="font-bold text-slate-700">Total armada: 154 unit</span>
-                    </div>
-                </div>
-
-                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-sm">Komposisi Kelompok Usia Alat</h3>
-                        <p class="text-[11px] text-slate-400 mb-3">Proporsi alat prima vs alat yang perlu diprioritaskan peremajaan</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 my-2">
-                            <div class="relative h-52 flex items-center justify-center"><canvas id="agePieChart"></canvas></div>
-                            <div class="space-y-2.5">
-                                <div onclick="filterByAgeGroup('1-10')" class="p-2.5 rounded-xl border border-slate-200 hover:border-emerald-400 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">1 – 10 Tahun</p><p class="text-[10px] text-slate-400">Alat baru / kondisi prima</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblAge1" class="text-sm font-black text-slate-900">0</p><p id="pctAge1" class="text-[10px] text-slate-400">0%</p></div>
-                                </div>
-                                <div onclick="filterByAgeGroup('10-15')" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">10 – 15 Tahun</p><p class="text-[10px] text-slate-400">Usia menengah</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblAge2" class="text-sm font-black text-slate-900">0</p><p id="pctAge2" class="text-[10px] text-slate-400">0%</p></div>
-                                </div>
-                                <div onclick="filterByAgeGroup('20+')" class="p-2.5 rounded-xl border border-slate-200 hover:border-rose-400 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">Di Atas 20 Tahun</p><p class="text-[10px] text-slate-400">Prioritas peremajaan (RKAP)</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblAge3" class="text-sm font-black text-slate-900">0</p><p id="pctAge3" class="text-[10px] text-slate-400">0%</p></div>
-                                </div>
-                            </div>
+                        <div class="relative h-80 w-full flex-1"><canvas id="terminalChart"></canvas></div>
+                        <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-500">
+                            <span>Sumber: database alat seluruh cabang</span>
+                            <span id="chartTotalFooter" class="font-bold text-slate-800 num">Total armada: 154 unit</span>
                         </div>
                     </div>
-                    <div class="mt-3 bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-[11px] text-rose-900">
-                        <i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i>
-                        <span id="ageSummaryNote">Memuat analisis usia armada...</span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-sm">Komposisi Sumber Energi</h3>
-                        <p class="text-[11px] text-slate-400 mb-3">BBM, listrik, hybrid dan alat belum diisi · klik untuk memfilter</p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 my-2">
-                            <div class="relative h-56 flex items-center justify-center"><canvas id="energyPieChart"></canvas></div>
+                    <div class="card p-5 lg:col-span-5 flex flex-col">
+                        <h3 class="font-bold text-slate-900 text-sm">Kelompok usia alat</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">Klik kelompok untuk melihat daftar alatnya</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 flex-1">
+                            <div class="relative h-52"><canvas id="agePieChart"></canvas></div>
                             <div class="space-y-2">
-                                <div onclick="filterByEnergy('BBM')" class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-500 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#c2410c]"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">BBM</p><p class="text-[10px] text-slate-400">Mesin diesel / bahan bakar</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblEnBBM" class="text-sm font-black text-slate-900">0</p><p id="pctEnBBM" class="text-[10px] text-slate-400">0%</p></div>
+                                <div onclick="filterByAgeGroup('1-10')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-emerald-600"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">1 – 10 tahun</p><p class="text-[10.5px] text-slate-500">Baru / kondisi prima</p></div></div>
+                                    <div class="text-right"><p id="lblAge1" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctAge1" class="text-[10.5px] text-slate-400 num">0%</p></div>
                                 </div>
-                                <div onclick="filterByEnergy('Listrik')" class="p-2.5 rounded-xl border border-slate-200 hover:border-sky-500 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">Listrik</p><p class="text-[10px] text-slate-400">Listrik PLN / baterai</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblEnListrik" class="text-sm font-black text-slate-900">0</p><p id="pctEnListrik" class="text-[10px] text-slate-400">0%</p></div>
+                                <div onclick="filterByAgeGroup('10-15')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-blue-600"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">10 – 15 tahun</p><p class="text-[10.5px] text-slate-500">Usia menengah</p></div></div>
+                                    <div class="text-right"><p id="lblAge2" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctAge2" class="text-[10.5px] text-slate-400 num">0%</p></div>
                                 </div>
-                                <div onclick="filterByEnergy('Hybrid')" class="p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">Hybrid</p><p class="text-[10px] text-slate-400">BBM + listrik</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblEnHybrid" class="text-sm font-black text-slate-900">0</p><p id="pctEnHybrid" class="text-[10px] text-slate-400">0%</p></div>
+                                <div onclick="filterByAgeGroup('20+')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-rose-600"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">Di atas 20 tahun</p><p class="text-[10.5px] text-slate-500">Prioritas peremajaan</p></div></div>
+                                    <div class="text-right"><p id="lblAge3" class="text-sm font-extrabold text-rose-700 num">0</p><p id="pctAge3" class="text-[10.5px] text-slate-400 num">0%</p></div>
                                 </div>
-                                <div onclick="filterByEnergy('Belum Diisi')" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 cursor-pointer flex justify-between items-center transition">
-                                    <div class="flex items-center space-x-2">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-[#e2e8f0]"></span>
-                                        <div><p class="text-xs font-bold text-slate-800">Belum Diisi</p><p class="text-[10px] text-slate-400">Belum ada data</p></div>
-                                    </div>
-                                    <div class="text-right"><p id="lblEnEmpty" class="text-sm font-black text-slate-900">0</p><p id="pctEnEmpty" class="text-[10px] text-slate-400">0%</p></div>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-rose-50 border border-rose-200 px-3 py-2.5 rounded-xl text-[11.5px] text-rose-900 flex gap-2">
+                            <i class="fa-solid fa-triangle-exclamation text-rose-600 mt-0.5"></i>
+                            <span id="ageSummaryNote">Memuat analisis usia armada...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 3. ENERGI ============ -->
+            <section>
+                <div class="section-head flex-wrap">
+                    <span class="no">3</span>
+                    <h2>Sumber Energi Penggerak</h2>
+                    <p>Komposisi BBM, listrik dan hybrid — dasar perencanaan elektrifikasi</p>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                    <div class="card p-5 lg:col-span-5">
+                        <h3 class="font-bold text-slate-900 text-sm">Komposisi sumber energi</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">Klik untuk memfilter tabel</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4">
+                            <div class="relative h-52"><canvas id="energyPieChart"></canvas></div>
+                            <div class="space-y-2">
+                                <div onclick="filterByEnergy('BBM')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-[#c2410c]"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">BBM</p><p class="text-[10.5px] text-slate-500">Mesin diesel</p></div></div>
+                                    <div class="text-right"><p id="lblEnBBM" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctEnBBM" class="text-[10.5px] text-slate-400 num">0%</p></div>
+                                </div>
+                                <div onclick="filterByEnergy('Listrik')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-[#0284c7]"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">Listrik</p><p class="text-[10.5px] text-slate-500">PLN / baterai</p></div></div>
+                                    <div class="text-right"><p id="lblEnListrik" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctEnListrik" class="text-[10.5px] text-slate-400 num">0%</p></div>
+                                </div>
+                                <div onclick="filterByEnergy('Hybrid')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-[#7c3aed]"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">Hybrid</p><p class="text-[10.5px] text-slate-500">BBM + listrik</p></div></div>
+                                    <div class="text-right"><p id="lblEnHybrid" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctEnHybrid" class="text-[10.5px] text-slate-400 num">0%</p></div>
+                                </div>
+                                <div onclick="filterByEnergy('Belum Diisi')" class="legend-row">
+                                    <div class="flex items-center gap-2.5"><span class="dot bg-[#e2e8f0] ring-1 ring-slate-300"></span>
+                                        <div><p class="text-xs font-bold text-slate-800">Belum diisi</p><p class="text-[10.5px] text-slate-500">Perlu dilengkapi</p></div></div>
+                                    <div class="text-right"><p id="lblEnEmpty" class="text-sm font-extrabold text-slate-900 num">0</p><p id="pctEnEmpty" class="text-[10.5px] text-slate-400 num">0%</p></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-7 flex flex-col justify-between">
-                    <div>
-                        <div class="mb-2">
-                            <h3 class="font-bold text-slate-900 text-sm">Sumber Energi per Kategori Alat</h3>
-                            <p class="text-[11px] text-slate-400">Mengikuti kategori & energi yang diisi di form Edit Alat</p>
-                        </div>
-                        <div class="relative h-64 w-full"><canvas id="energyCategoryChart"></canvas></div>
+                    <div class="card p-5 lg:col-span-7 flex flex-col">
+                        <h3 class="font-bold text-slate-900 text-sm">Sumber energi per kategori alat</h3>
+                        <p class="text-[11px] text-slate-500 mb-3">Mengikuti kategori &amp; energi yang diisi di form alat</p>
+                        <div class="relative h-64 w-full flex-1"><canvas id="energyCategoryChart"></canvas></div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="relative w-56">
-                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
-                            <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, jenis, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
+            <!-- ============ 4. DATABASE ALAT ============ -->
+            <section>
+                <div class="section-head flex-wrap">
+                    <span class="no">4</span>
+                    <h2>Database Alat</h2>
+                    <p>Cari, saring dan kelola data setiap alat</p>
+                    <span id="tableCountBadge" class="ml-auto text-xs font-bold text-slate-700 num">Menampilkan 0 data</span>
+                </div>
+                <div class="card overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-200 bg-slate-50/70 grid grid-cols-2 md:grid-cols-6 gap-2">
+                        <div class="relative col-span-2">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari nomor alat, jenis, brand…" class="control w-full !pl-8">
                         </div>
-                        <select id="filterCategory" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
-                            <option value="">Semua Kategori (4 Kelompok)</option>
+                        <select id="filterCategory" onchange="renderTable()" class="control">
+                            <option value="">Semua kategori</option>
                             <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
                             <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
                             <option value="Alat Pendukung">Alat Pendukung</option>
                             <option value="Alat Angkut">Alat Angkut</option>
                         </select>
-                        <select id="filterAge" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
-                            <option value="">Semua Kelompok Usia</option>
-                            <option value="1-10">1 – 10 Tahun</option>
-                            <option value="10-15">10 – 15 Tahun</option>
-                            <option value="20+">Di Atas 20 Tahun</option>
+                        <select id="filterAge" onchange="renderTable()" class="control">
+                            <option value="">Semua usia</option>
+                            <option value="1-10">1 – 10 tahun</option>
+                            <option value="10-15">10 – 15 tahun</option>
+                            <option value="20+">Di atas 20 tahun</option>
                         </select>
-                        <select id="filterEnergy" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
-                            <option value="">Semua Sumber Energi</option>
+                        <select id="filterEnergy" onchange="renderTable()" class="control">
+                            <option value="">Semua energi</option>
                             <option value="BBM">BBM</option>
                             <option value="Listrik">Listrik</option>
                             <option value="Hybrid">Hybrid</option>
                             <option value="Belum Diisi">Belum Diisi</option>
                         </select>
-                        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset</button>
+                        <button onclick="resetFilters()" class="control !bg-white hover:!bg-slate-100 font-semibold text-slate-600 cursor-pointer">
+                            <i class="fa-solid fa-filter-circle-xmark mr-1"></i> Hapus filter
+                        </button>
                     </div>
-                    <span id="tableCountBadge" class="text-xs font-semibold text-slate-500">Menampilkan 0 data</span>
-                </div>
 
-                <div class="overflow-x-auto max-h-[500px]">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead class="sticky top-0 bg-slate-100 text-slate-700 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 z-10">
-                            <tr>
-                                <th class="p-3">No</th>
-                                <th class="p-3">Terminal</th>
-                                <th class="p-3">Kategori</th>
-                                <th class="p-3">Jenis</th>
-                                <th class="p-3">Nomor Alat</th>
-                                <th class="p-3">Brand</th>
-                                <th class="p-3 text-center">Tahun</th>
-                                <th class="p-3 text-center">Usia</th>
-                                <th class="p-3">Energi</th>
-                                <th class="p-3">Status</th>
-                                <th id="colAksiHeader" class="p-3 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
-                    </table>
+                    <div class="overflow-x-auto max-h-[560px]">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead class="sticky top-0 bg-white text-slate-500 uppercase font-bold text-[10.5px] tracking-wider border-b border-slate-200 z-10 shadow-[0_1px_0_#e2e8f0]">
+                                <tr>
+                                    <th class="px-3 py-3 w-12">No</th>
+                                    <th class="px-3 py-3">Terminal</th>
+                                    <th class="px-3 py-3">Kategori</th>
+                                    <th class="px-3 py-3">Jenis</th>
+                                    <th class="px-3 py-3">Nomor Alat</th>
+                                    <th class="px-3 py-3">Brand</th>
+                                    <th class="px-3 py-3 text-center">Tahun</th>
+                                    <th class="px-3 py-3 text-center">Usia (th)</th>
+                                    <th class="px-3 py-3">Energi</th>
+                                    <th class="px-3 py-3">Status</th>
+                                    <th id="colAksiHeader" class="px-3 py-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- Keterangan -->
+            <details class="card px-4 py-3 text-xs text-slate-600">
+                <summary class="font-bold text-slate-800 cursor-pointer">Keterangan istilah &amp; perhitungan</summary>
+                <ul class="mt-2 space-y-1 list-disc pl-5">
+                    <li><b>Usia alat</b> = 2026 − tahun pembuatan. Alat tanpa tahun pembuatan tidak dihitung dalam rata-rata usia.</li>
+                    <li><b>Kategori:</b> Alat Utama Dermaga (QCC, GLC, GJC, FJC) · Alat Utama Lapangan (RTG, RMGC) · Alat Pendukung (RST, SIL, FLT) · Alat Angkut (HDT, TTR).</li>
+                    <li><b>Chassis &amp; spreader</b> tidak dihitung sebagai alat, kecuali kotak "Sertakan Chassis &amp; Spreader" dicentang.</li>
+                    <li><b>Hybrid</b> = alat dengan mesin diesel dan sumber listrik (mis. kabel 6,6 kV atau baterai).</li>
+                </ul>
+            </details>
         </main>
+
+        <footer class="border-t border-slate-200 bg-white">
+            <div class="max-w-7xl mx-auto px-4 py-3 text-[11px] text-slate-400 flex flex-wrap justify-between gap-2">
+                <span>SIMALAT · Sistem Manajemen Alat — PT IPC Terminal Petikemas</span>
+                <span>Data tersimpan terpusat di database</span>
+            </div>
+        </footer>
     </div>
 
-    <!-- MODAL FORM TAMBAH / EDIT -->
-    <div id="modalForm" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
-            <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
-                <h3 id="modalTitle" class="font-bold text-sm">Tambah Data Alat</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- ================= MODAL TAMBAH / EDIT ================= -->
+    <div id="modalForm" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div class="bg-slate-950 text-white px-5 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center"><i class="fa-solid fa-pen-ruler"></i></div>
+                    <div>
+                        <h3 id="modalTitle" class="font-bold text-sm">Tambah Data Alat</h3>
+                        <p class="text-[11px] text-slate-400">Perubahan tersimpan ke database dan terlihat semua pengguna</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 cursor-pointer" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <div class="p-5 space-y-3.5">
+            <div class="p-5 space-y-4 overflow-y-auto">
                 <input type="hidden" id="editId">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Terminal</label>
-                        <select id="inTerminal" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                            <option value="Tanjung Priok">Tanjung Priok</option>
-                            <option value="Panjang">Panjang</option>
-                            <option value="Jambi">Jambi</option>
-                            <option value="Teluk Bayur">Teluk Bayur</option>
-                            <option value="Palembang">Palembang</option>
-                            <option value="Pontianak">Pontianak</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Area Alat</label>
-                        <select id="inArea" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                            <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
-                            <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
-                            <option value="Alat Pendukung">Alat Pendukung</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Jenis Alat</label>
-                        <input type="text" id="inJenis" placeholder="QCC / RTG / RST / HDT" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Nomor Alat</label>
-                        <input type="text" id="inNomor" placeholder="QCC-0005" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Brand</label>
-                        <input type="text" id="inBrand" placeholder="ZPMC / IHI / Kalmar" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tahun Pembuatan</label>
-                        <input type="number" id="inTahun" placeholder="2015" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Sumber Energi</label>
-                        <select id="inEnergi" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                            <option value="BBM">BBM</option>
-                            <option value="Listrik">Listrik</option>
-                            <option value="Hybrid">Hybrid</option>
-                            <option value="Belum Diisi">Belum Diisi</option>
-                            <option value="Non-Engine">Non-Engine</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Status Kesiapan</label>
-                        <select id="inStatus" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                            <option value="Operasional">Operasional</option>
-                            <option value="Non Operasional">Non Operasional</option>
-                            <option value="Belum Diisi">Belum Diisi</option>
-                        </select>
+
+                <div>
+                    <p class="eyebrow mb-2">Identitas</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="field-label" for="inTerminal">Terminal</label>
+                            <select id="inTerminal" class="field">
+                                <option value="Tanjung Priok">Tanjung Priok</option>
+                                <option value="Panjang">Panjang</option>
+                                <option value="Jambi">Jambi</option>
+                                <option value="Teluk Bayur">Teluk Bayur</option>
+                                <option value="Palembang">Palembang</option>
+                                <option value="Pontianak">Pontianak</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inArea">Kategori alat</label>
+                            <select id="inArea" class="field">
+                                <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
+                                <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
+                                <option value="Alat Pendukung">Alat Pendukung</option>
+                                <option value="Alat Angkut">Alat Angkut</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inJenis">Jenis alat</label>
+                            <input type="text" id="inJenis" list="jenisList" placeholder="QCC / RTG / RST / HDT" class="field uppercase">
+                            <datalist id="jenisList">
+                                <option value="QCC"></option><option value="GLC"></option><option value="GJC"></option><option value="FJC"></option>
+                                <option value="RTG"></option><option value="RMGC"></option>
+                                <option value="RST"></option><option value="SIL"></option><option value="FLT"></option>
+                                <option value="HDT"></option><option value="TTR"></option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inNomor">Nomor alat</label>
+                            <input type="text" id="inNomor" placeholder="QCC-0005" class="field font-semibold uppercase">
+                        </div>
+                        <div>
+                            <label class="field-label" for="inBrand">Brand</label>
+                            <input type="text" id="inBrand" placeholder="ZPMC / IHI / Kalmar" class="field">
+                        </div>
+                        <div>
+                            <label class="field-label" for="inTahun">Tahun pembuatan</label>
+                            <input type="number" id="inTahun" min="1950" max="2026" placeholder="2015" class="field num">
+                        </div>
                     </div>
                 </div>
-                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+
+                <div>
+                    <p class="eyebrow mb-2">Kondisi &amp; energi</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="field-label" for="inStatus">Status kesiapan</label>
+                            <select id="inStatus" class="field">
+                                <option value="Operasional">Operasional</option>
+                                <option value="Non Operasional">Non Operasional</option>
+                                <option value="Belum Diisi">Belum Diisi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inEnergi">Sumber energi</label>
+                            <select id="inEnergi" class="field">
+                                <option value="BBM">BBM</option>
+                                <option value="Listrik">Listrik</option>
+                                <option value="Hybrid">Hybrid</option>
+                                <option value="Belum Diisi">Belum Diisi</option>
+                                <option value="Non-Engine">Non-Engine</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="eyebrow mb-2">Spesifikasi teknis</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                            <label class="field-label" for="inSize">Size type</label>
+                            <input type="text" id="inSize" list="sizeTypeList" data-label="Size type" placeholder="Pilih / ketik" class="field uppercase">
+                            <datalist id="sizeTypeList">
+                                <option value="FEEDER"></option><option value="PANAMAX"></option><option value="POST PANAMAX"></option>
+                                <option value="SUPER POST PANAMAX"></option><option value="20 FT"></option><option value="40 FT"></option>
+                                <option value="45 FT"></option><option value="20/40 FT"></option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inSpan">Span (m)</label>
+                            <input type="number" id="inSpan" data-label="Span" min="0" step="0.01" placeholder="0.00" class="field num">
+                        </div>
+                        <div>
+                            <label class="field-label" for="inOutreach">Outreach (m)</label>
+                            <input type="number" id="inOutreach" data-label="Outreach" min="0" step="0.01" placeholder="0.00" class="field num">
+                        </div>
+                        <div>
+                            <label class="field-label" for="inSwl">SWL (ton)</label>
+                            <input type="number" id="inSwl" data-label="SWL" min="0" step="0.1" placeholder="0.0" class="field num">
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-2">Kosongkan bila tidak berlaku untuk jenis alat ini (mis. head truck tanpa SWL).</p>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
                     <button onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
-                    <button onclick="saveAlat()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-lg cursor-pointer">Simpan ke Database</button>
+                    <button onclick="saveAlat()" class="px-5 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg cursor-pointer shadow-sm">
+                        <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan ke Database
+                    </button>
                 </div>
             </div>
         </div>
