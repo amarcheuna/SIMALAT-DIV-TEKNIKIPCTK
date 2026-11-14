@@ -87,7 +87,7 @@
                     <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
                         <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel / CSV
                     </button>
-                    <button id="btnAddTop" onclick="openModal('add')" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                    <button id="btnAddTop" onclick="openModal()" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
                         <i class="fa-solid fa-plus mr-1.5"></i> Tambah Alat
                     </button>
                 </div>
@@ -97,8 +97,9 @@
         <!-- MAIN DASHBOARD CONTENT -->
         <main class="max-w-7xl mx-auto px-4 py-5 space-y-5 flex-1 w-full">
 
-            <!-- BARIS 1 KPI -->
+            <!-- BARIS 1 KPI: DERMAGA, LAPANGAN, STATUS OPERASIONAL, RATA-RATA USIA -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: Total Alat Dermaga -->
                 <div onclick="filterByArea('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
@@ -116,6 +117,7 @@
                     </p>
                 </div>
 
+                <!-- KPI 2: Total Alat Lapangan -->
                 <div onclick="filterByArea('Alat Utama Lapangan')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-indigo-400 cursor-pointer transition flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
@@ -133,6 +135,7 @@
                     </p>
                 </div>
 
+                <!-- KPI 3: Status Operasional -->
                 <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
@@ -155,6 +158,7 @@
                     </div>
                 </div>
 
+                <!-- KPI 4: Rata-Rata Usia Alat -->
                 <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
@@ -172,7 +176,7 @@
                 </div>
             </div>
 
-            <!-- BARIS 2 KPI: SUMBER ENERGI PENGGERAK -->
+            <!-- BARIS 2 KPI: SUMBER ENERGI PENGGERAK (BBM, LISTRIK, HYBRID, BELUM DIISI) -->
             <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
                 <div class="flex flex-wrap justify-between items-center gap-4">
                     <div class="flex items-center space-x-3">
@@ -188,10 +192,10 @@
 
                     <div class="flex-1 min-w-[240px] max-w-xl">
                         <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
-                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%"></div>
-                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%"></div>
-                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%"></div>
-                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%"></div>
+                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%" title="BBM"></div>
+                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%" title="Listrik"></div>
+                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%" title="Hybrid"></div>
+                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%" title="Belum Diisi"></div>
                         </div>
                         <div class="flex flex-wrap justify-between gap-3 text-[11px] font-semibold mt-2">
                             <button onclick="filterByEnergy('BBM')" class="text-orange-600 hover:underline cursor-pointer">● BBM <span id="cntBBM">0</span></button>
@@ -203,8 +207,10 @@
                 </div>
             </div>
 
-            <!-- CHARTS ROW -->
+            <!-- CHARTS ROW (Stacked Bar + Doughnut 3 Kelompok Usia) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                
+                <!-- CHART 1: SEBARAN ARMADA PER CABANG & KATEGORI -->
                 <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-7 flex flex-col justify-between">
                     <div>
                         <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
@@ -227,6 +233,7 @@
                     </div>
                 </div>
 
+                <!-- CHART 2: KOMPOSISI KELOMPOK USIA ALAT (3 KELOMPOK) -->
                 <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
                     <div>
                         <h3 class="font-bold text-slate-900 text-sm">Komposisi Kelompok Usia Alat</h3>
@@ -295,7 +302,7 @@
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="relative w-60">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
-                            <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, kode master, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
+                            <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, jenis, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
                         </div>
                         <select id="filterArea" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
                             <option value="">Semua Area Alat</option>
@@ -315,7 +322,7 @@
                             <option value="Listrik">Listrik</option>
                             <option value="Hybrid">Hybrid</option>
                             <option value="Belum Diisi">Belum Diisi</option>
-                            <option value="Non-Engine">Non-Engine</option>
+                            <option value="Non-Engine">Non-Engine (Chassis/Spreader)</option>
                         </select>
                         <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset Filter</button>
                     </div>
@@ -330,13 +337,13 @@
                                 <th class="p-3">Terminal</th>
                                 <th class="p-3">Area Alat</th>
                                 <th class="p-3">Jenis</th>
-                                <th class="p-3">Nomor & Kode Master</th>
-                                <th class="p-3">Brand / Engine</th>
+                                <th class="p-3">Nomor Alat</th>
+                                <th class="p-3">Brand</th>
                                 <th class="p-3 text-center">Tahun</th>
                                 <th class="p-3 text-center">Usia</th>
                                 <th class="p-3">Energi</th>
                                 <th class="p-3">Status</th>
-                                <th class="p-3 text-center">Aksi</th>
+                                <th id="colAksiHeader" class="p-3 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
@@ -346,111 +353,585 @@
         </main>
     </div>
 
-    <!-- MODAL FORM LENGKAP (LIHAT DETAIL / EDIT / TAMBAH) -->
-    <div id="modalForm" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 my-6">
-            <!-- Modal Header -->
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-amber-400 text-slate-950 p-2 rounded-lg font-bold"><i id="modalHeaderIcon" class="fa-solid fa-wrench"></i></div>
-                    <div>
-                        <h3 id="modalTitle" class="font-bold text-sm">Edit Data Alat</h3>
-                        <p id="modalSubtitle" class="text-[11px] text-slate-400">Kategori, status, usia & energi yang disimpan langsung memperbarui kartu KPI & semua grafik</p>
-                    </div>
-                </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-xl"></i></button>
+    <!-- MODAL FORM TAMBAH / EDIT -->
+    <div id="modalForm" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
+                <h3 id="modalTitle" class="font-bold text-sm">Tambah Data Alat</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-
-            <!-- Modal Body (Scrollable) -->
-            <div class="p-6 space-y-5 max-h-[75vh] overflow-y-auto bg-slate-50">
+            <div class="p-5 space-y-3.5">
                 <input type="hidden" id="editId">
-
-                <!-- SECTION 1: IDENTITAS & KEPEMILIKAN -->
-                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
-                    <p class="text-[11px] font-bold text-blue-800 uppercase tracking-wider flex items-center">
-                        <i class="fa-solid fa-id-card mr-1.5"></i> Identitas & Kepemilikan Alat
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Terminal Cabang</label>
-                            <select id="inTerminal" class="w-full p-2 text-xs border border-slate-300 rounded-lg bg-white">
-                                <option value="Tanjung Priok">Tanjung Priok</option>
-                                <option value="Panjang">Panjang</option>
-                                <option value="Jambi">Jambi</option>
-                                <option value="Teluk Bayur">Teluk Bayur</option>
-                                <option value="Palembang">Palembang</option>
-                                <option value="Pontianak">Pontianak</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Area Alat</label>
-                            <select id="inArea" class="w-full p-2 text-xs border border-slate-300 rounded-lg bg-white">
-                                <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
-                                <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
-                                <option value="Alat Pendukung">Alat Pendukung</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jenis Alat</label>
-                            <input type="text" id="inJenis" placeholder="QCC / RTG / RST / HDT" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Terminal</label>
+                        <select id="inTerminal" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Tanjung Priok">Tanjung Priok</option>
+                            <option value="Panjang">Panjang</option>
+                            <option value="Jambi">Jambi</option>
+                            <option value="Teluk Bayur">Teluk Bayur</option>
+                            <option value="Palembang">Palembang</option>
+                            <option value="Pontianak">Pontianak</option>
+                        </select>
                     </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nomor Alat *</label>
-                            <input type="text" id="inNomor" placeholder="QCC-0001" class="w-full p-2 text-xs border border-slate-300 rounded-lg font-bold text-blue-950">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kode Alat (Master List)</label>
-                            <input type="text" id="inKodeMaster" placeholder="009-010-QCC-01" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Brand / Pabrikan / Tipe</label>
-                            <input type="text" id="inBrand" placeholder="IHI / ZPMC / Kalmar" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Merek & Tipe Engine</label>
-                            <input type="text" id="inEngine" placeholder="CUMMINS KTA50-G3" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kepemilikan</label>
-                            <input type="text" id="inKepemilikan" placeholder="IPC TPK" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mitra Pemeliharaan</label>
-                            <input type="text" id="inMitra" placeholder="BIMA" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Area Alat</label>
+                        <select id="inArea" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
+                            <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
+                            <option value="Alat Pendukung">Alat Pendukung</option>
+                        </select>
                     </div>
                 </div>
-
-                <!-- SECTION 2: USIA & STATUS KESIAPAN -->
-                <div class="bg-white p-4 rounded-xl border border-slate-200 space-y-3">
-                    <p class="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center">
-                        <i class="fa-solid fa-hourglass-half mr-1.5"></i> Usia & Status Kesiapan
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tahun Pembuatan</label>
-                            <input type="number" id="inTahun" oninput="updateLiveAgePreview()" placeholder="1980" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tahun Refurbish</label>
-                            <input type="number" id="inRefurb" placeholder="2021" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kelompok Usia (2026)</label>
-                            <div id="liveAgeBadge" class="p-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 text-center border border-slate-200">
-                                - Tahun
-                            </div>
-                        </div>
-                    </div>
-
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[10px]
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Jenis Alat</label>
+                        <input type="text" id="inJenis" placeholder="QCC / RTG / RST / HDT" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Nomor Alat</label>
+                        <input type="text" id="inNomor" placeholder="QCC-0005" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Brand</label>
+                        <input type="text" id="inBrand" placeholder="ZPMC / IHI / Kalmar" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tahun Pembuatan</label>
+                        <input type="number" id="inTahun" placeholder="2015" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Sumber Energi</label>
+                        <select id="inEnergi" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="BBM">BBM</option>
+                            <option value="Listrik">Listrik</option>
+                            <option value="Hybrid">Hybrid</option>
+                            <option value="Belum Diisi">Belum Diisi</option>
+                            <option value="Non-Engine">Non-Engine</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Status Kesiapan</label>
+                        <select id="inStatus" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Operasional">Operasional</option>
+                            <option value="Non Operasional">Non Operasional</option>
+                            <option value="Belum Diisi">Belum Diisi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
+                    <button onclick="saveAlat()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-lg cursor-pointer">Simpan ke Database</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yacnpsjhofestqrgsfvf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhY25wc2pob2Zlc3RxcmdzZnZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2MzA5NzgsImV4cCI6MjExMDIwNjk3OH0.8pQdGTiL_KZYI_l2JYvt_7WfpceLpXIJn8rcU60yWsg';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allData = [];
+        let userRole = 'viewer';
+        let selectedBranch = 'Semua';
+        let chartMode = 'semua';
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        const TERMINALS = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
+
+        async function checkSession() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) await setupUserAccess(session.user);
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('btnLoginSubmit');
+            errEl.classList.add('hidden');
+            btn.innerText = 'Memverifikasi...';
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            btn.innerText = 'Masuk ke Dashboard';
+            if (error) {
+                errEl.innerText = 'Login gagal: ' + error.message;
+                errEl.classList.remove('hidden');
+                return;
+            }
+            await setupUserAccess(data.user);
+        }
+
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            location.reload();
+        }
+
+        async function setupUserAccess(user) {
+            const { data } = await supabaseClient.from('user_roles').select('role').eq('user_id', user.id).single();
+            userRole = data ? data.role : 'viewer';
+
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            document.getElementById('roleBadge').innerText = userRole;
+
+            if (userRole === 'admin' || userRole === 'editor') {
+                document.getElementById('btnAddTop').classList.remove('hidden');
+            } else {
+                document.getElementById('colAksiHeader').classList.add('hidden');
+            }
+
+            await loadData();
+        }
+
+        async function loadData() {
+            const { data, error } = await supabaseClient.from('peralatan').select('*').order('id', { ascending: true });
+            if (error) {
+                alert('Gagal memuat data: ' + error.message);
+                return;
+            }
+            allData = data || [];
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
+        }
+
+        function renderBranchTabs() {
+            const container = document.getElementById('branchTabs');
+            let html = `<span class="text-[11px] font-bold text-slate-400 mr-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>CABANG</span>`;
+            
+            const isAll = selectedBranch === 'Semua';
+            html += `<button onclick="selectBranch('Semua')" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isAll ? 'tab-active' : 'tab-inactive'}">Semua <span class="ml-1 opacity-75">${allData.length}</span></button>`;
+
+            TERMINALS.forEach(t => {
+                const count = allData.filter(d => d.terminal === t).length;
+                const active = selectedBranch === t;
+                html += `<button onclick="selectBranch('${t}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition ${active ? 'tab-active' : 'tab-inactive'}">${t} <span class="ml-1 text-[10px] opacity-70">${count}</span></button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function selectBranch(branch) {
+            selectedBranch = branch;
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
+        }
+
+        function setChartMode(mode) {
+            chartMode = mode;
+            document.getElementById('btnModeSemua').className = mode === 'semua' 
+                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+            document.getElementById('btnModeUtama').className = mode === 'utama' 
+                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+            updateDashboard();
+        }
+
+        const barDataLabelsPlugin = {
+            id: 'barDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const meta0 = chart.getDatasetMeta(0);
+                if (!meta0 || !meta0.data) return;
+
+                for (let i = 0; i < meta0.data.length; i++) {
+                    let total = 0;
+                    let topY = chart.chartArea.bottom;
+                    let xPos = meta0.data[i].x;
+
+                    chart.data.datasets.forEach((ds, dsIdx) => {
+                        const meta = chart.getDatasetMeta(dsIdx);
+                        if (!meta.hidden && ds.data[i] > 0) {
+                            total += ds.data[i];
+                            const bar = meta.data[i];
+                            const barHeight = Math.abs(bar.base - bar.y);
+                            if (bar.y < topY) topY = bar.y;
+                            if (barHeight > 14) {
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillText(ds.data[i], bar.x, bar.y + barHeight / 2);
+                            }
+                        }
+                    });
+
+                    if (total > 0) {
+                        const boxW = 24, boxH = 16;
+                        ctx.fillStyle = '#0f172a';
+                        ctx.beginPath();
+                        ctx.roundRect(xPos - boxW / 2, topY - boxH - 4, boxW, boxH, 4);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(total, xPos, topY - boxH / 2 - 4);
+                    }
+                }
+                ctx.restore();
+            }
+        };
+
+        const pieDataLabelsPlugin = {
+            id: 'pieDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const ds = chart.data.datasets[0];
+                const meta = chart.getDatasetMeta(0);
+                const total = ds.data.reduce((a, b) => a + b, 0);
+                if (total === 0) return;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+
+                meta.data.forEach((arc, i) => {
+                    const val = ds.data[i];
+                    if (val > 0) {
+                        const pos = arc.tooltipPosition();
+                        const pct = Math.round((val / total) * 100);
+                        ctx.font = 'bold 11px Inter, sans-serif';
+                        ctx.fillText(val, pos.x, pos.y - 6);
+                        ctx.font = '10px Inter, sans-serif';
+                        ctx.fillText(pct + '%', pos.x, pos.y + 7);
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        function updateDashboard() {
+            const scopeData = selectedBranch === 'Semua' ? allData : allData.filter(d => d.terminal === selectedBranch);
+
+            const dermaga = scopeData.filter(d => d.area === 'Alat Utama Dermaga').length;
+            const lapangan = scopeData.filter(d => d.area === 'Alat Utama Lapangan').length;
+            const ops = scopeData.filter(d => d.status === 'Operasional').length;
+            const nonOps = scopeData.filter(d => d.status === 'Non Operasional').length;
+            const belumIsi = scopeData.filter(d => !d.status || d.status === 'Belum Diisi').length;
+            const opsPct = scopeData.length > 0 ? ((ops / scopeData.length) * 100).toFixed(1) : 0;
+
+            const validYears = scopeData.filter(d => d.tahun_pembuatan && d.tahun_pembuatan > 1950);
+            const avgAge = validYears.length > 0 
+                ? (validYears.reduce((sum, d) => sum + (2026 - d.tahun_pembuatan), 0) / validYears.length).toFixed(1)
+                : 0;
+
+            let oldestText = 'Tertua: -';
+            if (validYears.length > 0) {
+                const oldest = [...validYears].sort((a, b) => a.tahun_pembuatan - b.tahun_pembuatan)[0];
+                oldestText = `Tertua: ${oldest.nomor_alat} · ${2026 - oldest.tahun_pembuatan} th (${oldest.terminal})`;
+            }
+
+            document.getElementById('kpiDermaga').innerText = dermaga;
+            document.getElementById('kpiLapangan').innerText = lapangan;
+            document.getElementById('kpiOperasional').innerText = ops;
+            document.getElementById('kpiOpsPct').innerText = `${opsPct}% siap`;
+            document.getElementById('opsProgressBar').style.width = `${opsPct}%`;
+            document.getElementById('kpiNonOps').innerText = `● Non-ops ${nonOps}`;
+            document.getElementById('kpiBelumIsi').innerText = `● Belum diisi ${belumIsi}`;
+            document.getElementById('kpiRataUsia').innerText = avgAge;
+            document.getElementById('kpiTertua').innerText = oldestText;
+
+            // Update Sumber Energi Penggerak (Non-Chassis/Spreader)
+            const poweredUnits = scopeData.filter(d => (d.sumber_energi || 'BBM') !== 'Non-Engine' && d.jenis !== 'CHS' && d.jenis !== 'SPREADER');
+            const cBBM = poweredUnits.filter(d => (d.sumber_energi || 'BBM') === 'BBM').length;
+            const cListrik = poweredUnits.filter(d => d.sumber_energi === 'Listrik').length;
+            const cHybrid = poweredUnits.filter(d => d.sumber_energi === 'Hybrid').length;
+            const cEmpty = poweredUnits.filter(d => d.sumber_energi === 'Belum Diisi').length;
+            const totPowered = poweredUnits.length;
+            const pctBBM = totPowered > 0 ? Math.round((cBBM / totPowered) * 100) : 0;
+
+            document.getElementById('kpiEnergiBBM').innerText = cBBM;
+            document.getElementById('kpiEnergiBBMPct').innerText = `alat BBM · ${pctBBM}%`;
+            document.getElementById('cntBBM').innerText = cBBM;
+            document.getElementById('cntListrik').innerText = cListrik;
+            document.getElementById('cntHybrid').innerText = cHybrid;
+            document.getElementById('cntEnergiEmpty').innerText = cEmpty;
+
+            document.getElementById('barBBM').style.width = totPowered ? `${(cBBM / totPowered) * 100}%` : '0%';
+            document.getElementById('barListrik').style.width = totPowered ? `${(cListrik / totPowered) * 100}%` : '0%';
+            document.getElementById('barHybrid').style.width = totPowered ? `${(cHybrid / totPowered) * 100}%` : '0%';
+            document.getElementById('barEnergiEmpty').style.width = totPowered ? `${(cEmpty / totPowered) * 100}%` : '0%';
+
+            // Stacked Bar Chart per Cabang
+            const dermagaArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Dermaga').length);
+            const lapanganArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Lapangan').length);
+            const pendukungArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Pendukung').length);
+
+            const datasets = [
+                { label: 'Alat Utama Dermaga', data: dermagaArr, backgroundColor: '#1e3a8a', borderRadius: 3 },
+                { label: 'Alat Utama Lapangan', data: lapanganArr, backgroundColor: '#3b82f6', borderRadius: 3 }
+            ];
+            if (chartMode === 'semua') {
+                datasets.push({ label: 'Alat Pendukung', data: pendukungArr, backgroundColor: '#94a3b8', borderRadius: 3 });
+            }
+
+            const totalArmadaChart = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
+            document.getElementById('chartTotalFooter').innerText = `Total armada: ${totalArmadaChart} unit`;
+
+            if (barChartInstance) barChartInstance.destroy();
+            barChartInstance = new Chart(document.getElementById('terminalChart'), {
+                type: 'bar',
+                data: { labels: TERMINALS, datasets },
+                plugins: [barDataLabelsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            selectBranch(selectedBranch === TERMINALS[idx] ? 'Semua' : TERMINALS[idx]);
+                        }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' } }
+                    }
+                }
+            });
+
+            // Pie / Doughnut Chart 3 Kelompok Usia
+            let u1_10 = 0, u10_15 = 0, u20plus = 0;
+            validYears.forEach(d => {
+                const age = 2026 - d.tahun_pembuatan;
+                if (age <= 10) u1_10++;
+                else if (age <= 15) u10_15++;
+                else u20plus++;
+            });
+
+            const totalGrouped = u1_10 + u10_15 + u20plus;
+            document.getElementById('lblAge1').innerText = u1_10;
+            document.getElementById('pctAge1').innerText = totalGrouped ? Math.round((u1_10 / totalGrouped) * 100) + '%' : '0%';
+            document.getElementById('lblAge2').innerText = u10_15;
+            document.getElementById('pctAge2').innerText = totalGrouped ? Math.round((u10_15 / totalGrouped) * 100) + '%' : '0%';
+            document.getElementById('lblAge3').innerText = u20plus;
+            document.getElementById('pctAge3').innerText = totalGrouped ? Math.round((u20plus / totalGrouped) * 100) + '%' : '0%';
+
+            document.getElementById('ageSummaryNote').innerHTML = `<b>${u20plus} unit</b> berada di kelompok usia lanjut / <b>Di Atas 20 Tahun</b> dan menjadi prioritas peremajaan RKAP. <b>${u1_10} unit</b> masih berusia 1–10 tahun.`;
+
+            if (pieChartInstance) pieChartInstance.destroy();
+            pieChartInstance = new Chart(document.getElementById('agePieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['1–10 Tahun', '10–15 Tahun', 'Di Atas 20 Tahun'],
+                    datasets: [{
+                        data: [u1_10, u10_15, u20plus],
+                        backgroundColor: ['#059669', '#2563eb', '#e11d48'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                plugins: [pieDataLabelsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '48%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function filterByArea(area) {
+            document.getElementById('filterArea').value = area;
+            renderTable();
+        }
+
+        function filterByAgeGroup(grp) {
+            document.getElementById('filterAge').value = grp;
+            renderTable();
+        }
+
+        function filterByEnergy(en) {
+            document.getElementById('filterEnergy').value = en;
+            renderTable();
+        }
+
+        function resetFilters() {
+            selectedBranch = 'Semua';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterArea').value = '';
+            document.getElementById('filterAge').value = '';
+            document.getElementById('filterEnergy').value = '';
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
+        }
+
+        function renderTable() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const areaFilter = document.getElementById('filterArea').value;
+            const ageFilter = document.getElementById('filterAge').value;
+            const energyFilter = document.getElementById('filterEnergy').value;
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const filtered = allData.filter(item => {
+                if (selectedBranch !== 'Semua' && item.terminal !== selectedBranch) return false;
+                if (areaFilter && item.area !== areaFilter) return false;
+                if (energyFilter && (item.sumber_energi || 'BBM') !== energyFilter) return false;
+
+                if (ageFilter) {
+                    if (!item.tahun_pembuatan) return false;
+                    const age = 2026 - item.tahun_pembuatan;
+                    if (ageFilter === '1-10' && age > 10) return false;
+                    if (ageFilter === '10-15' && (age <= 10 || age > 15)) return false;
+                    if (ageFilter === '20+' && age <= 15) return false;
+                }
+
+                if (q) {
+                    const match = (item.nomor_alat || '').toLowerCase().includes(q) ||
+                                  (item.jenis || '').toLowerCase().includes(q) ||
+                                  (item.brand || '').toLowerCase().includes(q) ||
+                                  (item.terminal || '').toLowerCase().includes(q);
+                    if (!match) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${allData.length} unit`;
+
+            filtered.forEach((item, idx) => {
+                const age = item.tahun_pembuatan ? (2026 - item.tahun_pembuatan) : null;
+                let ageBadge = '<span class="text-slate-400">-</span>';
+                if (age !== null) {
+                    if (age > 20) ageBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[10px]">${age} th</span>`;
+                    else if (age > 15) ageBadge = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">${age} th</span>`;
+                    else ageBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px]">${age} th</span>`;
+                }
+
+                const en = item.sumber_energi || 'BBM';
+                let energyBadge = `<span class="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-[10px] font-semibold">${en}</span>`;
+                if (en === 'Listrik') energyBadge = `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Listrik</span>`;
+                else if (en === 'Hybrid') energyBadge = `<span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-semibold">Hybrid</span>`;
+                else if (en === 'Non-Engine' || en === 'Belum Diisi') energyBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">${en}</span>`;
+
+                let statusBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">${item.status || 'Belum Diisi'}</span>`;
+                if (item.status === 'Operasional') statusBadge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-semibold text-[10px]">Operasional</span>`;
+                else if (item.status === 'Non Operasional') statusBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-semibold text-[10px]">Non Operasional</span>`;
+
+                let actionHtml = '';
+                if (userRole === 'admin' || userRole === 'editor') {
+                    actionHtml += `<button onclick='openEditModal(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-800 mr-2 cursor-pointer" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>`;
+                }
+                if (userRole === 'admin') {
+                    actionHtml += `<button onclick="deleteAlat(${item.id})" class="text-rose-600 hover:text-rose-800 cursor-pointer" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-400">${idx + 1}</td>
+                    <td class="p-3 font-semibold text-slate-800">${item.terminal}</td>
+                    <td class="p-3">${item.area}</td>
+                    <td class="p-3 font-bold text-slate-700">${item.jenis}</td>
+                    <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
+                    <td class="p-3">${item.brand || '-'}</td>
+                    <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
+                    <td class="p-3 text-center">${ageBadge}</td>
+                    <td class="p-3">${energyBadge}</td>
+                    <td class="p-3">${statusBadge}</td>
+                    ${userRole !== 'viewer' ? `<td class="p-3 text-center">${actionHtml}</td>` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openModal() {
+            document.getElementById('editId').value = '';
+            document.getElementById('inJenis').value = '';
+            document.getElementById('inNomor').value = '';
+            document.getElementById('inBrand').value = '';
+            document.getElementById('inTahun').value = '';
+            document.getElementById('inEnergi').value = 'BBM';
+            document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
+            document.getElementById('modalForm').classList.remove('hidden');
+            document.getElementById('modalForm').classList.add('flex');
+        }
+
+        function openEditModal(item) {
+            document.getElementById('editId').value = item.id;
+            document.getElementById('inTerminal').value = item.terminal;
+            document.getElementById('inArea').value = item.area;
+            document.getElementById('inJenis').value = item.jenis;
+            document.getElementById('inNomor').value = item.nomor_alat;
+            document.getElementById('inBrand').value = item.brand || '';
+            document.getElementById('inTahun').value = item.tahun_pembuatan || '';
+            document.getElementById('inEnergi').value = item.sumber_energi || 'BBM';
+            document.getElementById('inStatus').value = item.status || 'Operasional';
+            document.getElementById('modalTitle').innerText = 'Edit Data Alat';
+            document.getElementById('modalForm').classList.remove('hidden');
+            document.getElementById('modalForm').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('modalForm').classList.add('hidden');
+            document.getElementById('modalForm').classList.remove('flex');
+        }
+
+        async function saveAlat() {
+            const id = document.getElementById('editId').value;
+            const payload = {
+                terminal: document.getElementById('inTerminal').value,
+                area: document.getElementById('inArea').value,
+                jenis: document.getElementById('inJenis').value.trim(),
+                nomor_alat: document.getElementById('inNomor').value.trim(),
+                brand: document.getElementById('inBrand').value.trim() || '-',
+                tahun_pembuatan: parseInt(document.getElementById('inTahun').value) || null,
+                sumber_energi: document.getElementById('inEnergi').value,
+                status: document.getElementById('inStatus').value
+            };
+
+            if (!payload.jenis || !payload.nomor_alat) {
+                alert('Jenis alat dan nomor alat wajib diisi.');
+                return;
+            }
+
+            const res = id 
+                ? await supabaseClient.from('peralatan').update(payload).eq('id', id)
+                : await supabaseClient.from('peralatan').insert([payload]);
+
+            if (res.error) {
+                alert('Gagal menyimpan data: ' + res.error.message);
+                return;
+            }
+            closeModal();
+            await loadData();
+        }
+
+        async function deleteAlat(id) {
+            if (!confirm('Hapus permanen data alat ini dari database Supabase?')) return;
+            const { error } = await supabaseClient.from('peralatan').delete().eq('id', id);
+            if (error) {
+                alert('Gagal menghapus (Hanya Admin yang diizinkan): ' + error.message);
+                return;
+            }
+            await loadData();
+        }
+
+        function exportCSV() {
+            const headers = ['Terminal', 'Area', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status'];
+            const rows = allData.map(d => [d.terminal, d.area, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.sumber_energi || '', d.status]);
+            const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Database_SIMALAT_IPCTPK_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+
+        window.onload = checkSession;
+    </script>
+</body>
+</html>
