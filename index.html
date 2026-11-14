@@ -82,13 +82,10 @@
         <!-- FILTER CABANG BAR & EXPORT -->
         <div class="bg-white border-b border-slate-200 shadow-2xs">
             <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
-                <div class="flex flex-wrap items-center gap-1.5" id="branchTabs">
-                    <span class="text-[11px] font-bold text-slate-400 mr-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>CABANG</span>
-                    <!-- Tombol tab cabang diisi dinamis -->
-                </div>
+                <div class="flex flex-wrap items-center gap-1.5" id="branchTabs"></div>
                 <div class="flex items-center space-x-2">
                     <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
-                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor CSV
+                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel / CSV
                     </button>
                     <button id="btnAddTop" onclick="openModal()" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
                         <i class="fa-solid fa-plus mr-1.5"></i> Tambah Alat
@@ -100,7 +97,7 @@
         <!-- MAIN DASHBOARD CONTENT -->
         <main class="max-w-7xl mx-auto px-4 py-5 space-y-5 flex-1 w-full">
 
-            <!-- 4 KPI CARDS (Sesuai Permintaan: Dermaga, Lapangan, Status Operasional, Rata-rata Usia) -->
+            <!-- BARIS 1 KPI: DERMAGA, LAPANGAN, STATUS OPERASIONAL, RATA-RATA USIA -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- KPI 1: Total Alat Dermaga -->
                 <div onclick="filterByArea('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
@@ -155,7 +152,7 @@
                             <div id="opsProgressBar" class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
                         </div>
                         <div class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-medium">
-                            <span id="kpiNonOps">● Non-ops 0</span>
+                            <span id="kpiNonOps" class="text-rose-600">● Non-ops 0</span>
                             <span id="kpiBelumIsi">● Belum diisi 0</span>
                         </div>
                     </div>
@@ -176,6 +173,37 @@
                     <p id="kpiTertua" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 truncate">
                         Tertua: -
                     </p>
+                </div>
+            </div>
+
+            <!-- BARIS 2 KPI: SUMBER ENERGI PENGGERAK (BBM, LISTRIK, HYBRID, BELUM DIISI) -->
+            <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
+                <div class="flex flex-wrap justify-between items-center gap-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-xl"></i></div>
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK (ALAT BERPENGGERAK / NON-CHASSIS)</p>
+                            <div class="flex items-baseline space-x-2 mt-0.5">
+                                <h3 id="kpiEnergiBBM" class="text-2xl font-black text-orange-600">0</h3>
+                                <span id="kpiEnergiBBMPct" class="text-xs font-semibold text-slate-600">alat BBM · 0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 min-w-[240px] max-w-xl">
+                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
+                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%" title="BBM"></div>
+                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%" title="Listrik"></div>
+                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%" title="Hybrid"></div>
+                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%" title="Belum Diisi"></div>
+                        </div>
+                        <div class="flex flex-wrap justify-between gap-3 text-[11px] font-semibold mt-2">
+                            <button onclick="filterByEnergy('BBM')" class="text-orange-600 hover:underline cursor-pointer">● BBM <span id="cntBBM">0</span></button>
+                            <button onclick="filterByEnergy('Listrik')" class="text-emerald-600 hover:underline cursor-pointer">● Listrik <span id="cntListrik">0</span></button>
+                            <button onclick="filterByEnergy('Hybrid')" class="text-purple-600 hover:underline cursor-pointer">● Hybrid <span id="cntHybrid">0</span></button>
+                            <button onclick="filterByEnergy('Belum Diisi')" class="text-slate-500 hover:underline cursor-pointer">● Belum Diisi <span id="cntEnergiEmpty">0</span></button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -272,7 +300,7 @@
             <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
                 <div class="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
                     <div class="flex flex-wrap items-center gap-2">
-                        <div class="relative w-64">
+                        <div class="relative w-60">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
                             <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, jenis, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
                         </div>
@@ -287,6 +315,14 @@
                             <option value="1-10">1 – 10 Tahun</option>
                             <option value="10-15">10 – 15 Tahun</option>
                             <option value="20+">Di Atas 20 Tahun</option>
+                        </select>
+                        <select id="filterEnergy" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
+                            <option value="">Semua Sumber Energi</option>
+                            <option value="BBM">BBM</option>
+                            <option value="Listrik">Listrik</option>
+                            <option value="Hybrid">Hybrid</option>
+                            <option value="Belum Diisi">Belum Diisi</option>
+                            <option value="Non-Engine">Non-Engine (Chassis/Spreader)</option>
                         </select>
                         <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset Filter</button>
                     </div>
@@ -304,7 +340,8 @@
                                 <th class="p-3">Nomor Alat</th>
                                 <th class="p-3">Brand</th>
                                 <th class="p-3 text-center">Tahun</th>
-                                <th class="p-3 text-center">Usia (Th)</th>
+                                <th class="p-3 text-center">Usia</th>
+                                <th class="p-3">Energi</th>
                                 <th class="p-3">Status</th>
                                 <th id="colAksiHeader" class="p-3 text-center">Aksi</th>
                             </tr>
@@ -366,13 +403,25 @@
                         <input type="number" id="inTahun" placeholder="2015" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Status Kesiapan</label>
-                    <select id="inStatus" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
-                        <option value="Operasional">Operasional</option>
-                        <option value="Non Operasional">Non Operasional</option>
-                        <option value="Belum Diisi">Belum Diisi</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Sumber Energi</label>
+                        <select id="inEnergi" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="BBM">BBM</option>
+                            <option value="Listrik">Listrik</option>
+                            <option value="Hybrid">Hybrid</option>
+                            <option value="Belum Diisi">Belum Diisi</option>
+                            <option value="Non-Engine">Non-Engine</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Status Kesiapan</label>
+                        <select id="inStatus" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Operasional">Operasional</option>
+                            <option value="Non Operasional">Non Operasional</option>
+                            <option value="Belum Diisi">Belum Diisi</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
                     <button onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
@@ -390,7 +439,7 @@
         let allData = [];
         let userRole = 'viewer';
         let selectedBranch = 'Semua';
-        let chartMode = 'semua'; // 'semua' atau 'utama'
+        let chartMode = 'semua';
         let barChartInstance = null;
         let pieChartInstance = null;
 
@@ -487,7 +536,6 @@
             updateDashboard();
         }
 
-        // Plugin untuk menggambar angka total di atas batang & label di dalam pie
         const barDataLabelsPlugin = {
             id: 'barDataLabels',
             afterDatasetsDraw(chart) {
@@ -519,7 +567,6 @@
                         }
                     });
 
-                    // Kotak total di atas batang
                     if (total > 0) {
                         const boxW = 24, boxH = 16;
                         ctx.fillStyle = '#0f172a';
@@ -594,6 +641,27 @@
             document.getElementById('kpiRataUsia').innerText = avgAge;
             document.getElementById('kpiTertua').innerText = oldestText;
 
+            // Update Sumber Energi Penggerak (Non-Chassis/Spreader)
+            const poweredUnits = scopeData.filter(d => (d.sumber_energi || 'BBM') !== 'Non-Engine' && d.jenis !== 'CHS' && d.jenis !== 'SPREADER');
+            const cBBM = poweredUnits.filter(d => (d.sumber_energi || 'BBM') === 'BBM').length;
+            const cListrik = poweredUnits.filter(d => d.sumber_energi === 'Listrik').length;
+            const cHybrid = poweredUnits.filter(d => d.sumber_energi === 'Hybrid').length;
+            const cEmpty = poweredUnits.filter(d => d.sumber_energi === 'Belum Diisi').length;
+            const totPowered = poweredUnits.length;
+            const pctBBM = totPowered > 0 ? Math.round((cBBM / totPowered) * 100) : 0;
+
+            document.getElementById('kpiEnergiBBM').innerText = cBBM;
+            document.getElementById('kpiEnergiBBMPct').innerText = `alat BBM · ${pctBBM}%`;
+            document.getElementById('cntBBM').innerText = cBBM;
+            document.getElementById('cntListrik').innerText = cListrik;
+            document.getElementById('cntHybrid').innerText = cHybrid;
+            document.getElementById('cntEnergiEmpty').innerText = cEmpty;
+
+            document.getElementById('barBBM').style.width = totPowered ? `${(cBBM / totPowered) * 100}%` : '0%';
+            document.getElementById('barListrik').style.width = totPowered ? `${(cListrik / totPowered) * 100}%` : '0%';
+            document.getElementById('barHybrid').style.width = totPowered ? `${(cHybrid / totPowered) * 100}%` : '0%';
+            document.getElementById('barEnergiEmpty').style.width = totPowered ? `${(cEmpty / totPowered) * 100}%` : '0%';
+
             // Stacked Bar Chart per Cabang
             const dermagaArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Dermaga').length);
             const lapanganArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Lapangan').length);
@@ -639,7 +707,7 @@
                 const age = 2026 - d.tahun_pembuatan;
                 if (age <= 10) u1_10++;
                 else if (age <= 15) u10_15++;
-                else u20plus++; // > 15 / > 20 masuk kelompok prioritas peremajaan
+                else u20plus++;
             });
 
             const totalGrouped = u1_10 + u10_15 + u20plus;
@@ -684,11 +752,17 @@
             renderTable();
         }
 
+        function filterByEnergy(en) {
+            document.getElementById('filterEnergy').value = en;
+            renderTable();
+        }
+
         function resetFilters() {
             selectedBranch = 'Semua';
             document.getElementById('searchInput').value = '';
             document.getElementById('filterArea').value = '';
             document.getElementById('filterAge').value = '';
+            document.getElementById('filterEnergy').value = '';
             renderBranchTabs();
             updateDashboard();
             renderTable();
@@ -698,12 +772,14 @@
             const q = document.getElementById('searchInput').value.toLowerCase();
             const areaFilter = document.getElementById('filterArea').value;
             const ageFilter = document.getElementById('filterAge').value;
+            const energyFilter = document.getElementById('filterEnergy').value;
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
             const filtered = allData.filter(item => {
                 if (selectedBranch !== 'Semua' && item.terminal !== selectedBranch) return false;
                 if (areaFilter && item.area !== areaFilter) return false;
+                if (energyFilter && (item.sumber_energi || 'BBM') !== energyFilter) return false;
 
                 if (ageFilter) {
                     if (!item.tahun_pembuatan) return false;
@@ -734,6 +810,12 @@
                     else ageBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px]">${age} th</span>`;
                 }
 
+                const en = item.sumber_energi || 'BBM';
+                let energyBadge = `<span class="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-[10px] font-semibold">${en}</span>`;
+                if (en === 'Listrik') energyBadge = `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Listrik</span>`;
+                else if (en === 'Hybrid') energyBadge = `<span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-semibold">Hybrid</span>`;
+                else if (en === 'Non-Engine' || en === 'Belum Diisi') energyBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">${en}</span>`;
+
                 let statusBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">${item.status || 'Belum Diisi'}</span>`;
                 if (item.status === 'Operasional') statusBadge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-semibold text-[10px]">Operasional</span>`;
                 else if (item.status === 'Non Operasional') statusBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-semibold text-[10px]">Non Operasional</span>`;
@@ -757,6 +839,7 @@
                     <td class="p-3">${item.brand || '-'}</td>
                     <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
                     <td class="p-3 text-center">${ageBadge}</td>
+                    <td class="p-3">${energyBadge}</td>
                     <td class="p-3">${statusBadge}</td>
                     ${userRole !== 'viewer' ? `<td class="p-3 text-center">${actionHtml}</td>` : ''}
                 `;
@@ -770,6 +853,7 @@
             document.getElementById('inNomor').value = '';
             document.getElementById('inBrand').value = '';
             document.getElementById('inTahun').value = '';
+            document.getElementById('inEnergi').value = 'BBM';
             document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
             document.getElementById('modalForm').classList.remove('hidden');
             document.getElementById('modalForm').classList.add('flex');
@@ -783,6 +867,7 @@
             document.getElementById('inNomor').value = item.nomor_alat;
             document.getElementById('inBrand').value = item.brand || '';
             document.getElementById('inTahun').value = item.tahun_pembuatan || '';
+            document.getElementById('inEnergi').value = item.sumber_energi || 'BBM';
             document.getElementById('inStatus').value = item.status || 'Operasional';
             document.getElementById('modalTitle').innerText = 'Edit Data Alat';
             document.getElementById('modalForm').classList.remove('hidden');
@@ -803,6 +888,7 @@
                 nomor_alat: document.getElementById('inNomor').value.trim(),
                 brand: document.getElementById('inBrand').value.trim() || '-',
                 tahun_pembuatan: parseInt(document.getElementById('inTahun').value) || null,
+                sumber_energi: document.getElementById('inEnergi').value,
                 status: document.getElementById('inStatus').value
             };
 
@@ -834,8 +920,8 @@
         }
 
         function exportCSV() {
-            const headers = ['Terminal', 'Area', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Status'];
-            const rows = allData.map(d => [d.terminal, d.area, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.status]);
+            const headers = ['Terminal', 'Area', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status'];
+            const rows = allData.map(d => [d.terminal, d.area, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.sumber_energi || '', d.status]);
             const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
