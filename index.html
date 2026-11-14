@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -84,7 +85,7 @@
             <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
                 <div class="flex flex-wrap items-center gap-1.5" id="branchTabs"></div>
                 <div class="flex items-center space-x-2">
-                    <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                    <button onclick="exportExcel()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition shadow-2xs">
                         <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel
                     </button>
                     <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition">
@@ -210,10 +211,10 @@
                 </div>
             </div>
 
-            <!-- BARIS 2 KPI: STATUS OPERASIONAL, RATA-RATA USIA ALAT, SUMBER ENERGI PENGGERAK (3 KOLOM) -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <!-- Status Operasional -->
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+            <!-- BARIS 2 KPI: STATUS OPERASIONAL, RATA-RATA USIA ALAT, SUMBER ENERGI PENGGERAK (RINCI PER KATEGORI) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                <!-- Status Operasional (4 col) -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 lg:col-span-4 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">STATUS OPERASIONAL</p>
@@ -235,8 +236,8 @@
                     </div>
                 </div>
 
-                <!-- Rata-Rata Usia Alat -->
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+                <!-- Rata-Rata Usia Alat (3 col) -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 lg:col-span-3 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RATA-RATA USIA ALAT</p>
@@ -252,29 +253,40 @@
                     </p>
                 </div>
 
-                <!-- Sumber Energi Penggerak -->
-                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+                <!-- Sumber Energi Penggerak: Rincian Solar (BBM) vs Listrik vs Hybrid per Kategori (5 col) -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK</p>
-                            <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiEnergiBBM" class="text-3xl font-black text-orange-600">0</h3>
-                                <span id="kpiEnergiBBMPct" class="text-xs font-medium text-slate-500">alat BBM · 0%</span>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK (BBM / SOLAR VS LISTRIK)</p>
+                            <div class="flex flex-wrap items-baseline gap-x-2 mt-1">
+                                <h3 id="kpiEnergiBBM" class="text-2xl font-black text-orange-600">0</h3>
+                                <span id="kpiEnergiBBMPct" class="text-xs font-semibold text-slate-600">BBM · 0%</span>
+                                <span class="text-slate-300">|</span>
+                                <span id="kpiEnergiListrikTop" class="text-xs font-bold text-sky-600">0 Listrik</span>
+                                <span class="text-slate-300">|</span>
+                                <span id="kpiEnergiHybridTop" class="text-xs font-bold text-purple-600">0 Hybrid</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-base"></i></div>
+                        <div class="p-2 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-base"></i></div>
                     </div>
-                    <div class="mt-3">
-                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
-                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%"></div>
-                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%"></div>
-                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%"></div>
-                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%"></div>
+
+                    <!-- Rincian Per Kategori (Dermaga, Lapangan, Pendukung, Angkut) -->
+                    <div class="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
+                        <div class="bg-slate-50 px-2.5 py-1.5 rounded-lg flex justify-between items-center">
+                            <span class="font-bold text-slate-700">Dermaga (<span id="enDermagaTot">0</span>):</span>
+                            <span id="enDermagaDetail" class="font-semibold text-slate-600">BBM 0 · Listrik 0 · Hybrid 0</span>
                         </div>
-                        <div class="flex flex-wrap justify-between text-[10px] font-semibold mt-1.5">
-                            <button onclick="filterByEnergy('Listrik')" class="text-emerald-600 hover:underline cursor-pointer">● Listrik <span id="cntListrik">0</span></button>
-                            <button onclick="filterByEnergy('Hybrid')" class="text-purple-600 hover:underline cursor-pointer">● Hybrid <span id="cntHybrid">0</span></button>
-                            <button onclick="filterByEnergy('Belum Diisi')" class="text-slate-500 hover:underline cursor-pointer">● Belum Diisi <span id="cntEnergiEmpty">0</span></button>
+                        <div class="bg-slate-50 px-2.5 py-1.5 rounded-lg flex justify-between items-center">
+                            <span class="font-bold text-slate-700">Lapangan (<span id="enLapanganTot">0</span>):</span>
+                            <span id="enLapanganDetail" class="font-semibold text-slate-600">BBM 0 · Listrik 0 · Hybrid 0</span>
+                        </div>
+                        <div class="bg-slate-50 px-2.5 py-1.5 rounded-lg flex justify-between items-center">
+                            <span class="font-bold text-slate-700">Pendukung (<span id="enPendukungTot">0</span>):</span>
+                            <span id="enPendukungDetail" class="font-semibold text-slate-600">BBM 0 · Listrik 0</span>
+                        </div>
+                        <div class="bg-slate-50 px-2.5 py-1.5 rounded-lg flex justify-between items-center">
+                            <span class="font-bold text-slate-700">Angkut (<span id="enAngkutTot">0</span>):</span>
+                            <span id="enAngkutDetail" class="font-semibold text-slate-600">BBM 0 · Listrik 0</span>
                         </div>
                     </div>
                 </div>
@@ -376,7 +388,7 @@
                 <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
                     <div>
                         <h3 class="font-bold text-slate-900 text-sm">Komposisi Sumber Energi</h3>
-                        <p class="text-[11px] text-slate-400 mb-3">BBM, listrik, hybrid dan alat belum diisi · klik untuk memfilter</p>
+                        <p class="text-[11px] text-slate-400 mb-3">BBM (solar), listrik, hybrid dan alat belum diisi · klik untuk memfilter</p>
                         
                         <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 my-2">
                             <div class="relative h-56 flex items-center justify-center">
@@ -388,7 +400,7 @@
                                         <span class="w-2.5 h-2.5 rounded-full bg-[#c2410c]"></span>
                                         <div>
                                             <p class="text-xs font-bold text-slate-800">BBM</p>
-                                            <p class="text-[10px] text-slate-400">Mesin diesel / bahan bakar</p>
+                                            <p class="text-[10px] text-slate-400">Mesin diesel / solar</p>
                                         </div>
                                     </div>
                                     <div class="text-right">
@@ -448,7 +460,7 @@
                     <div>
                         <div class="mb-2">
                             <h3 class="font-bold text-slate-900 text-sm">Sumber Energi per Kategori Alat</h3>
-                            <p class="text-[11px] text-slate-400">Mengikuti kategori & energi yang diisi di form Edit Alat</p>
+                            <p class="text-[11px] text-slate-400">Rincian jumlah alat BBM (Solar), Listrik, Hybrid & Belum Diisi pada tiap kategori</p>
                         </div>
                         <div class="relative h-64 w-full">
                             <canvas id="energyCategoryChart"></canvas>
@@ -480,7 +492,7 @@
                         </select>
                         <select id="filterEnergy" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
                             <option value="">Semua Sumber Energi</option>
-                            <option value="BBM">BBM</option>
+                            <option value="BBM">BBM (Solar)</option>
                             <option value="Listrik">Listrik</option>
                             <option value="Hybrid">Hybrid</option>
                             <option value="Belum Diisi">Belum Diisi</option>
@@ -610,11 +622,35 @@
         const TERMINALS = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
         const CATEGORIES_4 = ['Alat Utama Dermaga', 'Alat Utama Lapangan', 'Alat Pendukung', 'Alat Angkut'];
 
+        const JENIS_NAMA_MAP = {
+            'QCC': 'Quay Container Crane',
+            'GLC': 'Gantry Luffing Crane',
+            'GJC': 'Gantry Jib Crane',
+            'FJC': 'Fixed Jib Crane',
+            'RTG': 'Rubber Tyred Gantry',
+            'RMGC': 'Rail Mounted Gantry Crane',
+            'RST': 'Reach Stacker',
+            'SIL': 'Side Loader',
+            'FLT': 'Forklift',
+            'HDT': 'Head Truck',
+            'TTR': 'Terminal Tractor',
+            'CHS': 'Chassis',
+            'SPREADER': 'Spreader'
+        };
+
         function getFourCategory(item) {
             if (item.area === 'Alat Utama Dermaga') return 'Alat Utama Dermaga';
             if (item.area === 'Alat Utama Lapangan') return 'Alat Utama Lapangan';
             if (item.jenis === 'HDT' || item.jenis === 'TTR') return 'Alat Angkut';
             return 'Alat Pendukung';
+        }
+
+        function getAgeGroupLabel(tahun) {
+            if (!tahun || tahun <= 1950) return 'Tahun Belum Diisi';
+            const age = 2026 - tahun;
+            if (age <= 10) return '1–10 Tahun';
+            if (age <= 15) return '10–15 Tahun';
+            return 'Di Atas 20 Tahun';
         }
 
         function isPassiveEquipment(item) {
@@ -730,7 +766,6 @@
             updateDashboard();
         }
 
-        // Plugin untuk Bar Chart Vertikal
         const barDataLabelsPlugin = {
             id: 'barDataLabels',
             afterDatasetsDraw(chart) {
@@ -776,7 +811,6 @@
             }
         };
 
-        // Plugin untuk Horizontal Bar Chart (Sumber Energi per Kategori Alat)
         const horizontalBarLabelsPlugin = {
             id: 'horizontalBarLabels',
             afterDatasetsDraw(chart) {
@@ -822,7 +856,6 @@
             }
         };
 
-        // Plugin untuk Doughnut Chart (Angka & Persen di dalam segmen)
         const pieDataLabelsPlugin = {
             id: 'pieDataLabels',
             afterDatasetsDraw(chart) {
@@ -924,7 +957,7 @@
             document.getElementById('kpiRataUsia').innerText = avgAge;
             document.getElementById('kpiTertua').innerText = oldestText;
 
-            // Sumber Energi Penggerak (Card + Chart 3 + Chart 4)
+            // Sumber Energi Penggerak & Rincian Per Kategori
             const poweredUnits = scopeData.filter(d => !isPassiveEquipment(d));
             const cBBM = poweredUnits.filter(d => (d.sumber_energi || 'BBM') === 'BBM').length;
             const cListrik = poweredUnits.filter(d => d.sumber_energi === 'Listrik').length;
@@ -934,15 +967,33 @@
             const pctBBM = totPowered > 0 ? Math.round((cBBM / totPowered) * 100) : 0;
 
             document.getElementById('kpiEnergiBBM').innerText = cBBM;
-            document.getElementById('kpiEnergiBBMPct').innerText = `alat BBM · ${pctBBM}%`;
-            document.getElementById('cntListrik').innerText = cListrik;
-            document.getElementById('cntHybrid').innerText = cHybrid;
-            document.getElementById('cntEnergiEmpty').innerText = cEmpty;
+            document.getElementById('kpiEnergiBBMPct').innerText = `BBM · ${pctBBM}%`;
+            document.getElementById('kpiEnergiListrikTop').innerText = `${cListrik} Listrik`;
+            document.getElementById('kpiEnergiHybridTop').innerText = `${cHybrid} Hybrid`;
 
-            document.getElementById('barBBM').style.width = totPowered ? `${(cBBM / totPowered) * 100}%` : '0%';
-            document.getElementById('barListrik').style.width = totPowered ? `${(cListrik / totPowered) * 100}%` : '0%';
-            document.getElementById('barHybrid').style.width = totPowered ? `${(cHybrid / totPowered) * 100}%` : '0%';
-            document.getElementById('barEnergiEmpty').style.width = totPowered ? `${(cEmpty / totPowered) * 100}%` : '0%';
+            // Rincian Energi per Kategori pada Kartu KPI
+            const enStats = (arr) => {
+                const b = arr.filter(x => (x.sumber_energi || 'BBM') === 'BBM').length;
+                const l = arr.filter(x => x.sumber_energi === 'Listrik').length;
+                const h = arr.filter(x => x.sumber_energi === 'Hybrid').length;
+                return { tot: arr.length, b, l, h };
+            };
+            const sDerm = enStats(dDermaga.filter(d => !isPassiveEquipment(d)));
+            const sLap = enStats(dLapangan.filter(d => !isPassiveEquipment(d)));
+            const sPend = enStats(dPendukung.filter(d => !isPassiveEquipment(d)));
+            const sAngk = enStats(dAngkut.filter(d => !isPassiveEquipment(d)));
+
+            document.getElementById('enDermagaTot').innerText = sDerm.tot;
+            document.getElementById('enDermagaDetail').innerHTML = `<span class="text-orange-600">BBM ${sDerm.b}</span> · <span class="text-sky-600">Listrik ${sDerm.l}</span> · <span class="text-purple-600">Hybrid ${sDerm.h}</span>`;
+
+            document.getElementById('enLapanganTot').innerText = sLap.tot;
+            document.getElementById('enLapanganDetail').innerHTML = `<span class="text-orange-600">BBM ${sLap.b}</span> · <span class="text-sky-600">Listrik ${sLap.l}</span> · <span class="text-purple-600">Hybrid ${sLap.h}</span>`;
+
+            document.getElementById('enPendukungTot').innerText = sPend.tot;
+            document.getElementById('enPendukungDetail').innerHTML = `<span class="text-orange-600">BBM ${sPend.b}</span> · <span class="text-sky-600">Listrik ${sPend.l}</span>`;
+
+            document.getElementById('enAngkutTot').innerText = sAngk.tot;
+            document.getElementById('enAngkutDetail').innerHTML = `<span class="text-orange-600">BBM ${sAngk.b}</span> · <span class="text-sky-600">Listrik ${sAngk.l}</span>`;
 
             // Update Label & Persentase Kartu Komposisi Sumber Energi
             const enPct = (v) => totPowered > 0 ? Math.round((v / totPowered) * 100) + '%' : '0%';
@@ -1078,227 +1129,4 @@
             energyCatBarInstance = new Chart(document.getElementById('energyCategoryChart'), {
                 type: 'bar',
                 data: {
-                    labels: CATEGORIES_4,
-                    datasets: [
-                        { label: 'BBM', data: catBBM, backgroundColor: '#c2410c', borderRadius: 3 },
-                        { label: 'Listrik', data: catListrik, backgroundColor: '#0284c7', borderRadius: 3 },
-                        { label: 'Hybrid', data: catHybrid, backgroundColor: '#7c3aed', borderRadius: 3 },
-                        { label: 'Belum Diisi', data: catEmpty, backgroundColor: '#e2e8f0', borderRadius: 3 }
-                    ]
-                },
-                plugins: [horizontalBarLabelsPlugin],
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    layout: { padding: { right: 44 } },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            align: 'end',
-                            labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'rectRounded', font: { size: 11 } }
-                        }
-                    },
-                    scales: {
-                        x: { stacked: true, beginAtZero: true, grid: { color: '#f8fafc' }, border: { display: false } },
-                        y: { stacked: true, grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 }, color: '#334155' } }
-                    }
-                }
-            });
-        }
-
-        function filterByCategory(cat) {
-            document.getElementById('filterCategory').value = cat;
-            renderTable();
-        }
-
-        function filterByAgeGroup(grp) {
-            document.getElementById('filterAge').value = grp;
-            renderTable();
-        }
-
-        function filterByEnergy(en) {
-            document.getElementById('filterEnergy').value = en;
-            renderTable();
-        }
-
-        function resetFilters() {
-            selectedBranch = 'Semua';
-            document.getElementById('searchInput').value = '';
-            document.getElementById('filterCategory').value = '';
-            document.getElementById('filterAge').value = '';
-            document.getElementById('filterEnergy').value = '';
-            renderBranchTabs();
-            updateDashboard();
-            renderTable();
-        }
-
-        function renderTable() {
-            const baseData = getActiveDataset();
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            const catFilter = document.getElementById('filterCategory').value;
-            const ageFilter = document.getElementById('filterAge').value;
-            const energyFilter = document.getElementById('filterEnergy').value;
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-
-            const filtered = baseData.filter(item => {
-                if (selectedBranch !== 'Semua' && item.terminal !== selectedBranch) return false;
-                if (catFilter && item.kategori4 !== catFilter) return false;
-                if (energyFilter && (item.sumber_energi || 'BBM') !== energyFilter) return false;
-
-                if (ageFilter) {
-                    if (!item.tahun_pembuatan) return false;
-                    const age = 2026 - item.tahun_pembuatan;
-                    if (ageFilter === '1-10' && age > 10) return false;
-                    if (ageFilter === '10-15' && (age <= 10 || age > 15)) return false;
-                    if (ageFilter === '20+' && age <= 15) return false;
-                }
-
-                if (q) {
-                    const match = (item.nomor_alat || '').toLowerCase().includes(q) ||
-                                  (item.jenis || '').toLowerCase().includes(q) ||
-                                  (item.brand || '').toLowerCase().includes(q) ||
-                                  (item.terminal || '').toLowerCase().includes(q);
-                    if (!match) return false;
-                }
-                return true;
-            });
-
-            document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${baseData.length} unit`;
-
-            filtered.forEach((item, idx) => {
-                const age = item.tahun_pembuatan ? (2026 - item.tahun_pembuatan) : null;
-                let ageBadge = '<span class="text-slate-400">-</span>';
-                if (age !== null) {
-                    if (age > 20) ageBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[10px]">${age} th</span>`;
-                    else if (age > 15) ageBadge = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">${age} th</span>`;
-                    else ageBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px]">${age} th</span>`;
-                }
-
-                const en = item.sumber_energi || 'BBM';
-                let energyBadge = `<span class="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-[10px] font-semibold">${en}</span>`;
-                if (en === 'Listrik') energyBadge = `<span class="px-2 py-0.5 bg-sky-50 text-sky-700 rounded text-[10px] font-semibold">Listrik</span>`;
-                else if (en === 'Hybrid') energyBadge = `<span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-semibold">Hybrid</span>`;
-                else if (en === 'Non-Engine' || en === 'Belum Diisi') energyBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">${en}</span>`;
-
-                let statusBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">${item.status || 'Belum Diisi'}</span>`;
-                if (item.status === 'Operasional') statusBadge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-semibold text-[10px]">Operasional</span>`;
-                else if (item.status === 'Non Operasional') statusBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-semibold text-[10px]">Non Operasional</span>`;
-
-                let actionHtml = '';
-                if (userRole === 'admin' || userRole === 'editor') {
-                    actionHtml += `<button onclick='openEditModal(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-800 mr-2 cursor-pointer" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>`;
-                }
-                if (userRole === 'admin') {
-                    actionHtml += `<button onclick="deleteAlat(${item.id})" class="text-rose-600 hover:text-rose-800 cursor-pointer" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>`;
-                }
-
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition';
-                tr.innerHTML = `
-                    <td class="p-3 font-medium text-slate-400">${idx + 1}</td>
-                    <td class="p-3 font-semibold text-slate-800">${item.terminal}</td>
-                    <td class="p-3">${item.kategori4}</td>
-                    <td class="p-3 font-bold text-slate-700">${item.jenis}</td>
-                    <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
-                    <td class="p-3">${item.brand || '-'}</td>
-                    <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
-                    <td class="p-3 text-center">${ageBadge}</td>
-                    <td class="p-3">${energyBadge}</td>
-                    <td class="p-3">${statusBadge}</td>
-                    ${userRole !== 'viewer' ? `<td class="p-3 text-center">${actionHtml}</td>` : ''}
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function openModal() {
-            document.getElementById('editId').value = '';
-            document.getElementById('inJenis').value = '';
-            document.getElementById('inNomor').value = '';
-            document.getElementById('inBrand').value = '';
-            document.getElementById('inTahun').value = '';
-            document.getElementById('inEnergi').value = 'BBM';
-            document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
-            document.getElementById('modalForm').classList.remove('hidden');
-            document.getElementById('modalForm').classList.add('flex');
-        }
-
-        function openEditModal(item) {
-            document.getElementById('editId').value = item.id;
-            document.getElementById('inTerminal').value = item.terminal;
-            document.getElementById('inArea').value = item.area;
-            document.getElementById('inJenis').value = item.jenis;
-            document.getElementById('inNomor').value = item.nomor_alat;
-            document.getElementById('inBrand').value = item.brand || '';
-            document.getElementById('inTahun').value = item.tahun_pembuatan || '';
-            document.getElementById('inEnergi').value = item.sumber_energi || 'BBM';
-            document.getElementById('inStatus').value = item.status || 'Operasional';
-            document.getElementById('modalTitle').innerText = 'Edit Data Alat';
-            document.getElementById('modalForm').classList.remove('hidden');
-            document.getElementById('modalForm').classList.add('flex');
-        }
-
-        function closeModal() {
-            document.getElementById('modalForm').classList.add('hidden');
-            document.getElementById('modalForm').classList.remove('flex');
-        }
-
-        async function saveAlat() {
-            const id = document.getElementById('editId').value;
-            const payload = {
-                terminal: document.getElementById('inTerminal').value,
-                area: document.getElementById('inArea').value,
-                jenis: document.getElementById('inJenis').value.trim().toUpperCase(),
-                nomor_alat: document.getElementById('inNomor').value.trim(),
-                brand: document.getElementById('inBrand').value.trim() || '-',
-                tahun_pembuatan: parseInt(document.getElementById('inTahun').value) || null,
-                sumber_energi: document.getElementById('inEnergi').value,
-                status: document.getElementById('inStatus').value
-            };
-
-            if (!payload.jenis || !payload.nomor_alat) {
-                alert('Jenis alat dan nomor alat wajib diisi.');
-                return;
-            }
-
-            const res = id 
-                ? await supabaseClient.from('peralatan').update(payload).eq('id', id)
-                : await supabaseClient.from('peralatan').insert([payload]);
-
-            if (res.error) {
-                alert('Gagal menyimpan data: ' + res.error.message);
-                return;
-            }
-            closeModal();
-            await loadData();
-        }
-
-        async function deleteAlat(id) {
-            if (!confirm('Hapus permanen data alat ini dari database Supabase?')) return;
-            const { error } = await supabaseClient.from('peralatan').delete().eq('id', id);
-            if (error) {
-                alert('Gagal menghapus (Hanya Admin yang diizinkan): ' + error.message);
-                return;
-            }
-            await loadData();
-        }
-
-        function exportCSV() {
-            const baseData = getActiveDataset();
-            const headers = ['Terminal', 'Kategori', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status'];
-            const rows = baseData.map(d => [d.terminal, d.kategori4, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.sumber_energi || '', d.status]);
-            const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Database_SIMALAT_IPCTPK_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-        }
-
-        window.onload = checkSession;
-    </script>
-</body>
-</html>
+                    labels:
