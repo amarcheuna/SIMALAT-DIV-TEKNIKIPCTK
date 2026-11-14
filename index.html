@@ -280,7 +280,7 @@
                 </div>
             </div>
 
-            <!-- CHARTS ROW (Stacked Bar 4 Kategori + Doughnut 3 Kelompok Usia) -->
+            <!-- BARIS 3 CHARTS: SEBARAN ARMADA PER CABANG & KOMPOSISI KELOMPOK USIA ALAT -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 
                 <!-- CHART 1: SEBARAN ARMADA PER CABANG & KATEGORI -->
@@ -365,6 +365,94 @@
                     <div class="mt-3 bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-[11px] text-rose-900">
                         <i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i>
                         <span id="ageSummaryNote">Memuat analisis usia armada...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARIS 4 CHARTS: KOMPOSISI SUMBER ENERGI & SUMBER ENERGI PER KATEGORI ALAT -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                
+                <!-- CHART 3: KOMPOSISI SUMBER ENERGI (DOUGHNUT + 4 KARTU RINCIAN) -->
+                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Komposisi Sumber Energi</h3>
+                        <p class="text-[11px] text-slate-400 mb-3">BBM, listrik, hybrid dan alat belum diisi · klik untuk memfilter</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 my-2">
+                            <div class="relative h-56 flex items-center justify-center">
+                                <canvas id="energyPieChart"></canvas>
+                            </div>
+                            <div class="space-y-2">
+                                <div onclick="filterByEnergy('BBM')" class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-500 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#c2410c]"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">BBM</p>
+                                            <p class="text-[10px] text-slate-400">Mesin diesel / bahan bakar</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblEnBBM" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctEnBBM" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+
+                                <div onclick="filterByEnergy('Listrik')" class="p-2.5 rounded-xl border border-slate-200 hover:border-sky-500 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#0284c7]"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">Listrik</p>
+                                            <p class="text-[10px] text-slate-400">Listrik PLN / baterai</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblEnListrik" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctEnListrik" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+
+                                <div onclick="filterByEnergy('Hybrid')" class="p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">Hybrid</p>
+                                            <p class="text-[10px] text-slate-400">BBM + listrik</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblEnHybrid" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctEnHybrid" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+
+                                <div onclick="filterByEnergy('Belum Diisi')" class="p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-[#e2e8f0]"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">Belum Diisi</p>
+                                            <p class="text-[10px] text-slate-400">Belum ada data</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblEnEmpty" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctEnEmpty" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CHART 4: SUMBER ENERGI PER KATEGORI ALAT (HORIZONTAL STACKED BAR) -->
+                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-7 flex flex-col justify-between">
+                    <div>
+                        <div class="mb-2">
+                            <h3 class="font-bold text-slate-900 text-sm">Sumber Energi per Kategori Alat</h3>
+                            <p class="text-[11px] text-slate-400">Mengikuti kategori & energi yang diisi di form Edit Alat</p>
+                        </div>
+                        <div class="relative h-64 w-full">
+                            <canvas id="energyCategoryChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -516,10 +604,12 @@
         let includePassive = false;
         let barChartInstance = null;
         let pieChartInstance = null;
+        let energyPieInstance = null;
+        let energyCatBarInstance = null;
 
         const TERMINALS = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
+        const CATEGORIES_4 = ['Alat Utama Dermaga', 'Alat Utama Lapangan', 'Alat Pendukung', 'Alat Angkut'];
 
-        // Klasifikasi 4 kategori persis seperti desain referensi
         function getFourCategory(item) {
             if (item.area === 'Alat Utama Dermaga') return 'Alat Utama Dermaga';
             if (item.area === 'Alat Utama Lapangan') return 'Alat Utama Lapangan';
@@ -640,6 +730,7 @@
             updateDashboard();
         }
 
+        // Plugin untuk Bar Chart Vertikal
         const barDataLabelsPlugin = {
             id: 'barDataLabels',
             afterDatasetsDraw(chart) {
@@ -685,6 +776,53 @@
             }
         };
 
+        // Plugin untuk Horizontal Bar Chart (Sumber Energi per Kategori Alat)
+        const horizontalBarLabelsPlugin = {
+            id: 'horizontalBarLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const meta0 = chart.getDatasetMeta(0);
+                if (!meta0 || !meta0.data) return;
+
+                for (let i = 0; i < meta0.data.length; i++) {
+                    let total = 0;
+                    let rightX = chart.chartArea.left;
+                    let yPos = meta0.data[i].y;
+
+                    chart.data.datasets.forEach((ds, dsIdx) => {
+                        const meta = chart.getDatasetMeta(dsIdx);
+                        if (!meta.hidden && ds.data[i] > 0) {
+                            total += ds.data[i];
+                            const bar = meta.data[i];
+                            const barWidth = Math.abs(bar.x - bar.base);
+                            if (bar.x > rightX) rightX = bar.x;
+                            if (barWidth > 14) {
+                                ctx.fillStyle = ds.label === 'Belum Diisi' ? '#1e293b' : '#ffffff';
+                                ctx.fillText(ds.data[i], bar.base + barWidth / 2, yPos);
+                            }
+                        }
+                    });
+
+                    if (total > 0) {
+                        const boxW = 26, boxH = 18;
+                        ctx.fillStyle = '#0f172a';
+                        ctx.beginPath();
+                        ctx.roundRect(rightX + 8, yPos - boxH / 2, boxW, boxH, 5);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(total, rightX + 8 + boxW / 2, yPos);
+                    }
+                }
+                ctx.restore();
+            }
+        };
+
+        // Plugin untuk Doughnut Chart (Angka & Persen di dalam segmen)
         const pieDataLabelsPlugin = {
             id: 'pieDataLabels',
             afterDatasetsDraw(chart) {
@@ -701,9 +839,9 @@
 
                 meta.data.forEach((arc, i) => {
                     const val = ds.data[i];
-                    if (val > 0) {
+                    const pct = Math.round((val / total) * 100);
+                    if (val > 0 && pct >= 6) {
                         const pos = arc.tooltipPosition();
-                        const pct = Math.round((val / total) * 100);
                         ctx.font = 'bold 11px Inter, sans-serif';
                         ctx.fillText(val, pos.x, pos.y - 6);
                         ctx.font = '10px Inter, sans-serif';
@@ -786,7 +924,7 @@
             document.getElementById('kpiRataUsia').innerText = avgAge;
             document.getElementById('kpiTertua').innerText = oldestText;
 
-            // Sumber Energi Penggerak
+            // Sumber Energi Penggerak (Card + Chart 3 + Chart 4)
             const poweredUnits = scopeData.filter(d => !isPassiveEquipment(d));
             const cBBM = poweredUnits.filter(d => (d.sumber_energi || 'BBM') === 'BBM').length;
             const cListrik = poweredUnits.filter(d => d.sumber_energi === 'Listrik').length;
@@ -805,6 +943,17 @@
             document.getElementById('barListrik').style.width = totPowered ? `${(cListrik / totPowered) * 100}%` : '0%';
             document.getElementById('barHybrid').style.width = totPowered ? `${(cHybrid / totPowered) * 100}%` : '0%';
             document.getElementById('barEnergiEmpty').style.width = totPowered ? `${(cEmpty / totPowered) * 100}%` : '0%';
+
+            // Update Label & Persentase Kartu Komposisi Sumber Energi
+            const enPct = (v) => totPowered > 0 ? Math.round((v / totPowered) * 100) + '%' : '0%';
+            document.getElementById('lblEnBBM').innerText = cBBM;
+            document.getElementById('pctEnBBM').innerText = enPct(cBBM);
+            document.getElementById('lblEnListrik').innerText = cListrik;
+            document.getElementById('pctEnListrik').innerText = enPct(cListrik);
+            document.getElementById('lblEnHybrid').innerText = cHybrid;
+            document.getElementById('pctEnHybrid').innerText = enPct(cHybrid);
+            document.getElementById('lblEnEmpty').innerText = cEmpty;
+            document.getElementById('pctEnEmpty').innerText = enPct(cEmpty);
 
             // Stacked Bar Chart 4 Kategori per Cabang
             const dermagaArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Utama Dermaga').length);
@@ -890,6 +1039,72 @@
                     plugins: { legend: { display: false } }
                 }
             });
+
+            // CHART 3: Doughnut Komposisi Sumber Energi
+            if (energyPieInstance) energyPieInstance.destroy();
+            energyPieInstance = new Chart(document.getElementById('energyPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['BBM', 'Listrik', 'Hybrid', 'Belum Diisi'],
+                    datasets: [{
+                        data: [cBBM, cListrik, cHybrid, cEmpty],
+                        backgroundColor: ['#c2410c', '#0284c7', '#7c3aed', '#e2e8f0'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                plugins: [pieDataLabelsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '48%',
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const labels = ['BBM', 'Listrik', 'Hybrid', 'Belum Diisi'];
+                            filterByEnergy(labels[elements[0].index]);
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // CHART 4: Horizontal Stacked Bar Sumber Energi per Kategori Alat
+            const catBBM = CATEGORIES_4.map(c => poweredUnits.filter(d => d.kategori4 === c && (d.sumber_energi || 'BBM') === 'BBM').length);
+            const catListrik = CATEGORIES_4.map(c => poweredUnits.filter(d => d.kategori4 === c && d.sumber_energi === 'Listrik').length);
+            const catHybrid = CATEGORIES_4.map(c => poweredUnits.filter(d => d.kategori4 === c && d.sumber_energi === 'Hybrid').length);
+            const catEmpty = CATEGORIES_4.map(c => poweredUnits.filter(d => d.kategori4 === c && d.sumber_energi === 'Belum Diisi').length);
+
+            if (energyCatBarInstance) energyCatBarInstance.destroy();
+            energyCatBarInstance = new Chart(document.getElementById('energyCategoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: CATEGORIES_4,
+                    datasets: [
+                        { label: 'BBM', data: catBBM, backgroundColor: '#c2410c', borderRadius: 3 },
+                        { label: 'Listrik', data: catListrik, backgroundColor: '#0284c7', borderRadius: 3 },
+                        { label: 'Hybrid', data: catHybrid, backgroundColor: '#7c3aed', borderRadius: 3 },
+                        { label: 'Belum Diisi', data: catEmpty, backgroundColor: '#e2e8f0', borderRadius: 3 }
+                    ]
+                },
+                plugins: [horizontalBarLabelsPlugin],
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { right: 44 } },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: { boxWidth: 10, usePointStyle: true, pointStyle: 'rectRounded', font: { size: 11 } }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, beginAtZero: true, grid: { color: '#f8fafc' }, border: { display: false } },
+                        y: { stacked: true, grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 }, color: '#334155' } }
+                    }
+                }
+            });
         }
 
         function filterByCategory(cat) {
@@ -963,7 +1178,7 @@
 
                 const en = item.sumber_energi || 'BBM';
                 let energyBadge = `<span class="px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-[10px] font-semibold">${en}</span>`;
-                if (en === 'Listrik') energyBadge = `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-semibold">Listrik</span>`;
+                if (en === 'Listrik') energyBadge = `<span class="px-2 py-0.5 bg-sky-50 text-sky-700 rounded text-[10px] font-semibold">Listrik</span>`;
                 else if (en === 'Hybrid') energyBadge = `<span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-semibold">Hybrid</span>`;
                 else if (en === 'Non-Engine' || en === 'Belum Diisi') energyBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px]">${en}</span>`;
 
