@@ -3,220 +3,416 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIMALAT IPC TPK - Cloud Database</title>
+    <title>SIMALAT Eksekutif - PT IPC Terminal Petikemas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Library Resmi Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .tab-active { background-color: #0f172a; color: #ffffff; }
+        .tab-inactive { background-color: #f1f5f9; color: #475569; }
+        .tab-inactive:hover { background-color: #e2e8f0; }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800">
+<body class="bg-slate-100 text-slate-800 antialiased">
 
     <!-- HALAMAN LOGIN -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 w-full max-w-md space-y-5">
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md space-y-5">
             <div class="text-center">
-                <div class="inline-flex bg-blue-950 text-yellow-400 p-3 rounded-xl mb-2">
+                <div class="inline-flex bg-amber-400 text-slate-950 p-3.5 rounded-xl mb-3 shadow-md">
                     <i class="fa-solid fa-anchor text-2xl"></i>
                 </div>
-                <h2 class="text-xl font-black text-slate-900">SIMALAT IPC TPK</h2>
-                <p class="text-xs text-slate-500">Masuk menggunakan akun operasional Anda</p>
+                <h2 class="text-xl font-black text-slate-900 tracking-tight">SIMALAT IPC TPK</h2>
+                <p class="text-xs text-slate-500 mt-1">Sistem Informasi Manajemen & Peremajaan Alat (Basis 2026)</p>
             </div>
-            <div class="space-y-3">
+            <div class="space-y-3.5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Email Akun</label>
-                    <input type="email" id="loginEmail" placeholder="admin@ipctpk.co.id" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Operasional</label>
+                    <input type="email" id="loginEmail" placeholder="amarcheuna@gmail.com" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 bg-slate-50">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Kata Sandi</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••••••" class="w-full p-2.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600 bg-slate-50">
                 </div>
-                <button onclick="handleLogin()" class="w-full bg-blue-900 hover:bg-blue-950 text-white py-2.5 rounded-lg text-xs font-bold transition cursor-pointer">
+                <button onclick="handleLogin()" id="btnLoginSubmit" class="w-full bg-blue-950 hover:bg-blue-900 text-white py-2.5 rounded-lg text-xs font-bold transition cursor-pointer shadow-sm">
                     Masuk ke Dashboard
                 </button>
             </div>
-            <p id="loginError" class="text-xs text-rose-600 text-center hidden"></p>
+            <p id="loginError" class="text-xs text-rose-600 text-center hidden font-medium"></p>
         </div>
     </div>
 
-    <!-- HALAMAN UTAMA APLIKASI (Tersembunyi sebelum login) -->
-    <div id="appScreen" class="hidden">
-        <!-- HEADER -->
-        <header class="bg-blue-950 text-white shadow-md sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <!-- HALAMAN UTAMA APLIKASI -->
+    <div id="appScreen" class="hidden min-h-screen flex flex-col">
+        
+        <!-- TOP HEADER -->
+        <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40 border-b border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
                 <div class="flex items-center space-x-3">
-                    <div class="bg-yellow-400 text-blue-950 p-2 rounded-lg font-bold"><i class="fa-solid fa-anchor"></i></div>
+                    <div class="bg-amber-400 text-slate-950 p-2 rounded-lg font-bold shadow-xs">
+                        <i class="fa-solid fa-anchor text-base"></i>
+                    </div>
                     <div>
-                        <h1 class="font-black text-sm uppercase">SIMALAT IPC TPK</h1>
-                        <p class="text-[10px] text-blue-300">Terhubung ke Supabase PostgreSQL Real-Time</p>
+                        <div class="flex items-center space-x-2">
+                            <h1 class="font-extrabold text-sm tracking-wide">SIMALAT · Sistem Manajemen Alat</h1>
+                            <span class="px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-300 rounded-full border border-slate-700">Tahun acuan 2026</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400">PT IPC Terminal Petikemas — Tanjung Priok · Panjang · Jambi · Teluk Bayur · Palembang · Pontianak</p>
                     </div>
                 </div>
+
                 <div class="flex items-center space-x-3">
                     <div class="text-right">
-                        <p id="userEmailDisplay" class="text-[11px] text-blue-200"></p>
-                        <span id="roleBadge" class="px-2 py-0.5 text-[10px] font-bold rounded bg-yellow-400 text-blue-950 uppercase"></span>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">HAK AKSES AKTIF</p>
+                        <div class="flex items-center justify-end space-x-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span id="roleBadge" class="text-xs font-bold text-amber-400 uppercase">ADMIN</span>
+                            <span class="text-[11px] text-slate-300 hidden sm:inline">· <span id="userEmailDisplay"></span></span>
+                        </div>
                     </div>
-                    <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
-                        Keluar
+                    <button onclick="handleLogout()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer">
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- MAIN CONTENT -->
-        <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
-            <!-- KPI CARDS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase">Total Alat Dermaga</p>
-                    <h3 id="kpiDermaga" class="text-2xl font-black text-blue-700 mt-1">0 Unit</h3>
+        <!-- FILTER CABANG BAR & EXPORT -->
+        <div class="bg-white border-b border-slate-200 shadow-2xs">
+            <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex flex-wrap items-center gap-1.5" id="branchTabs">
+                    <span class="text-[11px] font-bold text-slate-400 mr-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>CABANG</span>
+                    <!-- Tombol tab cabang diisi dinamis -->
                 </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase">Total Alat Lapangan</p>
-                    <h3 id="kpiLapangan" class="text-2xl font-black text-indigo-700 mt-1">0 Unit</h3>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase">Status Operasional</p>
-                    <h3 id="kpiOperasional" class="text-2xl font-black text-emerald-600 mt-1">0 Unit</h3>
-                </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase">Rata-Rata Usia</p>
-                    <h3 id="kpiRataUsia" class="text-2xl font-black text-amber-600 mt-1">0 Th</h3>
-                </div>
-            </div>
-
-            <!-- CHARTS -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 lg:col-span-2">
-                    <h3 class="font-bold text-slate-800 text-sm mb-3">Sebaran Armada per Terminal</h3>
-                    <div class="relative h-64"><canvas id="terminalChart"></canvas></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-slate-800 text-sm mb-3">Komposisi Usia (3 Kelompok)</h3>
-                    <div class="relative h-64"><canvas id="agePieChart"></canvas></div>
-                </div>
-            </div>
-
-            <!-- TABLE & ACTIONS -->
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                    <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari nomor alat / terminal..." class="px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg w-64">
-                    <button id="btnAdd" onclick="openModal()" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
-                        <i class="fa-solid fa-plus mr-1"></i> Tambah Alat
+                <div class="flex items-center space-x-2">
+                    <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor CSV
+                    </button>
+                    <button id="btnAddTop" onclick="openModal()" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Tambah Alat
                     </button>
                 </div>
-                <div class="overflow-x-auto">
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD CONTENT -->
+        <main class="max-w-7xl mx-auto px-4 py-5 space-y-5 flex-1 w-full">
+
+            <!-- 4 KPI CARDS (Sesuai Permintaan: Dermaga, Lapangan, Status Operasional, Rata-rata Usia) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- KPI 1: Total Alat Dermaga -->
+                <div onclick="filterByArea('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL ALAT DERMAGA</p>
+                            <div class="flex items-baseline space-x-2 mt-1">
+                                <h3 id="kpiDermaga" class="text-3xl font-black text-slate-900">0</h3>
+                                <span class="text-xs font-semibold text-slate-500">unit</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-blue-50 text-blue-700 rounded-xl"><i class="fa-solid fa-ship text-lg"></i></div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex justify-between">
+                        <span>QCC · GLC · GJC · FJC</span>
+                        <span class="text-blue-600 font-semibold">Filter →</span>
+                    </p>
+                </div>
+
+                <!-- KPI 2: Total Alat Lapangan -->
+                <div onclick="filterByArea('Alat Utama Lapangan')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-indigo-400 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL ALAT LAPANGAN</p>
+                            <div class="flex items-baseline space-x-2 mt-1">
+                                <h3 id="kpiLapangan" class="text-3xl font-black text-slate-900">0</h3>
+                                <span class="text-xs font-semibold text-slate-500">unit</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl"><i class="fa-solid fa-cubes-stacked text-lg"></i></div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex justify-between">
+                        <span>RTG · RMGC</span>
+                        <span class="text-indigo-600 font-semibold">Filter →</span>
+                    </p>
+                </div>
+
+                <!-- KPI 3: Status Operasional -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">STATUS OPERASIONAL</p>
+                            <div class="flex items-center space-x-2 mt-1">
+                                <h3 id="kpiOperasional" class="text-3xl font-black text-emerald-600">0</h3>
+                                <span id="kpiOpsPct" class="px-2 py-0.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 rounded-full">0% siap</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                    </div>
+                    <div class="mt-3">
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div id="opsProgressBar" class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1.5 font-medium">
+                            <span id="kpiNonOps">● Non-ops 0</span>
+                            <span id="kpiBelumIsi">● Belum diisi 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI 4: Rata-Rata Usia Alat -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RATA-RATA USIA ALAT</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
+                                <h3 id="kpiRataUsia" class="text-3xl font-black text-amber-600">0</h3>
+                                <span class="text-xs font-semibold text-slate-500">tahun</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-hourglass-half text-lg"></i></div>
+                    </div>
+                    <p id="kpiTertua" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 truncate">
+                        Tertua: -
+                    </p>
+                </div>
+            </div>
+
+            <!-- CHARTS ROW (Stacked Bar + Doughnut 3 Kelompok Usia) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                
+                <!-- CHART 1: SEBARAN ARMADA PER CABANG & KATEGORI -->
+                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-7 flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-sm">Sebaran Armada per Cabang & Kategori</h3>
+                                <p class="text-[11px] text-slate-400">Total unit tampil langsung di atas setiap batang · klik batang untuk memfilter</p>
+                            </div>
+                            <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-[11px] font-semibold">
+                                <button id="btnModeSemua" onclick="setChartMode('semua')" class="px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition">Semua armada</button>
+                                <button id="btnModeUtama" onclick="setChartMode('utama')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition">Alat utama saja</button>
+                            </div>
+                        </div>
+                        <div class="relative h-72 w-full">
+                            <canvas id="terminalChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
+                        <span>Sumber: database real-time Supabase IPC TPK</span>
+                        <span id="chartTotalFooter" class="font-bold text-slate-700">Total armada: 0 unit</span>
+                    </div>
+                </div>
+
+                <!-- CHART 2: KOMPOSISI KELOMPOK USIA ALAT (3 KELOMPOK) -->
+                <div class="bg-white p-5 rounded-xl shadow-xs border border-slate-200 lg:col-span-5 flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-sm">Komposisi Kelompok Usia Alat</h3>
+                        <p class="text-[11px] text-slate-400 mb-3">Proporsi alat prima vs alat yang perlu diprioritaskan peremajaan</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 items-center gap-4 my-2">
+                            <div class="relative h-52 flex items-center justify-center">
+                                <canvas id="agePieChart"></canvas>
+                            </div>
+                            <div class="space-y-2.5">
+                                <div onclick="filterByAgeGroup('1-10')" class="p-2.5 rounded-xl border border-slate-200 hover:border-emerald-400 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">1 – 10 Tahun</p>
+                                            <p class="text-[10px] text-slate-400">Alat baru / kondisi prima</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblAge1" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctAge1" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+
+                                <div onclick="filterByAgeGroup('10-15')" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-400 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">10 – 15 Tahun</p>
+                                            <p class="text-[10px] text-slate-400">Usia menengah</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblAge2" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctAge2" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+
+                                <div onclick="filterByAgeGroup('20+')" class="p-2.5 rounded-xl border border-slate-200 hover:border-rose-400 cursor-pointer flex justify-between items-center transition">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
+                                        <div>
+                                            <p class="text-xs font-bold text-slate-800">Di Atas 20 Tahun</p>
+                                            <p class="text-[10px] text-slate-400">Prioritas peremajaan (RKAP)</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p id="lblAge3" class="text-sm font-black text-slate-900">0</p>
+                                        <p id="pctAge3" class="text-[10px] text-slate-400">0%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-[11px] text-rose-900">
+                        <i class="fa-solid fa-triangle-exclamation text-rose-600 mr-1"></i>
+                        <span id="ageSummaryNote">Memuat analisis usia armada...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATA TABLE SECTION -->
+            <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative w-64">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
+                            <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, jenis, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
+                        </div>
+                        <select id="filterArea" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
+                            <option value="">Semua Area Alat</option>
+                            <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
+                            <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
+                            <option value="Alat Pendukung">Alat Pendukung</option>
+                        </select>
+                        <select id="filterAge" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
+                            <option value="">Semua Kelompok Usia</option>
+                            <option value="1-10">1 – 10 Tahun</option>
+                            <option value="10-15">10 – 15 Tahun</option>
+                            <option value="20+">Di Atas 20 Tahun</option>
+                        </select>
+                        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset Filter</button>
+                    </div>
+                    <span id="tableCountBadge" class="text-xs font-semibold text-slate-500">Menampilkan 0 data</span>
+                </div>
+
+                <div class="overflow-x-auto max-h-[500px]">
                     <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-700 uppercase font-bold text-[10px]">
+                        <thead class="sticky top-0 bg-slate-100 text-slate-700 uppercase font-bold text-[10px] tracking-wider border-b border-slate-200 z-10">
+                            <tr>
+                                <th class="p-3">No</th>
                                 <th class="p-3">Terminal</th>
-                                <th class="p-3">Area</th>
+                                <th class="p-3">Area Alat</th>
                                 <th class="p-3">Jenis</th>
-                                <th class="p-3">No. Alat</th>
+                                <th class="p-3">Nomor Alat</th>
                                 <th class="p-3">Brand</th>
                                 <th class="p-3 text-center">Tahun</th>
+                                <th class="p-3 text-center">Usia (Th)</th>
                                 <th class="p-3">Status</th>
                                 <th id="colAksiHeader" class="p-3 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
                     </table>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL TAMBAH / EDIT -->
-    <div id="modalForm" class="fixed inset-0 bg-slate-950/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
-            <h3 id="modalTitle" class="font-bold text-sm text-slate-900">Form Data Alat</h3>
-            <input type="hidden" id="editId">
-            <div class="grid grid-cols-2 gap-3">
+    <!-- MODAL FORM TAMBAH / EDIT -->
+    <div id="modalForm" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
+                <h3 id="modalTitle" class="font-bold text-sm">Tambah Data Alat</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-3.5">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Terminal</label>
+                        <select id="inTerminal" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Tanjung Priok">Tanjung Priok</option>
+                            <option value="Panjang">Panjang</option>
+                            <option value="Jambi">Jambi</option>
+                            <option value="Teluk Bayur">Teluk Bayur</option>
+                            <option value="Palembang">Palembang</option>
+                            <option value="Pontianak">Pontianak</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Area Alat</label>
+                        <select id="inArea" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                            <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
+                            <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
+                            <option value="Alat Pendukung">Alat Pendukung</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Jenis Alat</label>
+                        <input type="text" id="inJenis" placeholder="QCC / RTG / RST / HDT" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Nomor Alat</label>
+                        <input type="text" id="inNomor" placeholder="QCC-0005" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Brand</label>
+                        <input type="text" id="inBrand" placeholder="ZPMC / IHI / Kalmar" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Tahun Pembuatan</label>
+                        <input type="number" id="inTahun" placeholder="2015" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    </div>
+                </div>
                 <div>
-                    <label class="block text-[11px] font-bold mb-1">Terminal</label>
-                    <select id="inTerminal" class="w-full p-2 text-xs border rounded-lg">
-                        <option value="Tanjung Priok">Tanjung Priok</option>
-                        <option value="Panjang">Panjang</option>
-                        <option value="Jambi">Jambi</option>
-                        <option value="Teluk Bayur">Teluk Bayur</option>
-                        <option value="Palembang">Palembang</option>
-                        <option value="Pontianak">Pontianak</option>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Status Kesiapan</label>
+                    <select id="inStatus" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                        <option value="Operasional">Operasional</option>
+                        <option value="Non Operasional">Non Operasional</option>
+                        <option value="Belum Diisi">Belum Diisi</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-bold mb-1">Area</label>
-                    <select id="inArea" class="w-full p-2 text-xs border rounded-lg">
-                        <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
-                        <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
-                        <option value="Alat Pendukung">Alat Pendukung</option>
-                    </select>
+                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                    <button onclick="closeModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
+                    <button onclick="saveAlat()" class="px-4 py-2 text-xs font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-lg cursor-pointer">Simpan ke Database</button>
                 </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[11px] font-bold mb-1">Jenis Alat</label>
-                    <input type="text" id="inJenis" placeholder="QCC / RTG / RST" class="w-full p-2 text-xs border rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold mb-1">Nomor Alat</label>
-                    <input type="text" id="inNomor" placeholder="QCC-0001" class="w-full p-2 text-xs border rounded-lg">
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[11px] font-bold mb-1">Brand</label>
-                    <input type="text" id="inBrand" placeholder="ZPMC / IHI" class="w-full p-2 text-xs border rounded-lg">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold mb-1">Tahun Pembuatan</label>
-                    <input type="number" id="inTahun" placeholder="2015" class="w-full p-2 text-xs border rounded-lg">
-                </div>
-            </div>
-            <div>
-                <label class="block text-[11px] font-bold mb-1">Status</label>
-                <select id="inStatus" class="w-full p-2 text-xs border rounded-lg">
-                    <option value="Operasional">Operasional</option>
-                    <option value="Non Operasional">Non Operasional</option>
-                </select>
-            </div>
-            <div class="flex justify-end space-x-2 pt-2">
-                <button onclick="closeModal()" class="px-4 py-2 text-xs bg-slate-100 rounded-lg cursor-pointer">Batal</button>
-                <button onclick="saveAlat()" class="px-4 py-2 text-xs bg-blue-600 text-white font-bold rounded-lg cursor-pointer">Simpan ke Database</button>
             </div>
         </div>
     </div>
 
     <script>
-        // =========================================================================
-        // GANTI DUA BARIS DI BAWAH INI DENGAN PROJECT URL & ANON KEY SUPABASE ANDA
-        // =========================================================================
         const SUPABASE_URL = 'https://yacnpsjhofestqrgsfvf.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhY25wc2pob2Zlc3RxcmdzZnZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2MzA5NzgsImV4cCI6MjExMDIwNjk3OH0.8pQdGTiL_KZYI_l2JYvt_7WfpceLpXIJn8rcU60yWsg';
-        
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let allData = [];
         let userRole = 'viewer';
+        let selectedBranch = 'Semua';
+        let chartMode = 'semua'; // 'semua' atau 'utama'
         let barChartInstance = null;
         let pieChartInstance = null;
 
-        // Cek sesi login saat halaman dibuka
+        const TERMINALS = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
+
         async function checkSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session) {
-                await setupUserAccess(session.user);
-            }
+            if (session) await setupUserAccess(session.user);
         }
 
         async function handleLogin() {
-            const email = document.getElementById('loginEmail').value;
+            const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
             const errEl = document.getElementById('loginError');
+            const btn = document.getElementById('btnLoginSubmit');
             errEl.classList.add('hidden');
+            btn.innerText = 'Memverifikasi...';
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            btn.innerText = 'Masuk ke Dashboard';
             if (error) {
-                errEl.innerText = "Login gagal: " + error.message;
+                errEl.innerText = 'Login gagal: ' + error.message;
                 errEl.classList.remove('hidden');
                 return;
             }
@@ -229,13 +425,7 @@
         }
 
         async function setupUserAccess(user) {
-            // Ambil role dari tabel user_roles
-            const { data } = await supabaseClient
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', user.id)
-                .single();
-
+            const { data } = await supabaseClient.from('user_roles').select('role').eq('user_id', user.id).single();
             userRole = data ? data.role : 'viewer';
 
             document.getElementById('loginScreen').classList.add('hidden');
@@ -243,9 +433,8 @@
             document.getElementById('userEmailDisplay').innerText = user.email;
             document.getElementById('roleBadge').innerText = userRole;
 
-            // Atur tampilan tombol sesuai hak akses
             if (userRole === 'admin' || userRole === 'editor') {
-                document.getElementById('btnAdd').classList.remove('hidden');
+                document.getElementById('btnAddTop').classList.remove('hidden');
             } else {
                 document.getElementById('colAksiHeader').classList.add('hidden');
             }
@@ -253,103 +442,334 @@
             await loadData();
         }
 
-        // Ambil data dari PostgreSQL Supabase
         async function loadData() {
-            const { data, error } = await supabaseClient
-                .from('peralatan')
-                .select('*')
-                .order('id', { ascending: true });
-
+            const { data, error } = await supabaseClient.from('peralatan').select('*').order('id', { ascending: true });
             if (error) {
                 alert('Gagal memuat data: ' + error.message);
                 return;
             }
             allData = data || [];
+            renderBranchTabs();
             updateDashboard();
             renderTable();
         }
 
-        function updateDashboard() {
-            const dermaga = allData.filter(d => d.area === 'Alat Utama Dermaga').length;
-            const lapangan = allData.filter(d => d.area === 'Alat Utama Lapangan').length;
-            const ops = allData.filter(d => d.status === 'Operasional').length;
+        function renderBranchTabs() {
+            const container = document.getElementById('branchTabs');
+            let html = `<span class="text-[11px] font-bold text-slate-400 mr-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>CABANG</span>`;
+            
+            const isAll = selectedBranch === 'Semua';
+            html += `<button onclick="selectBranch('Semua')" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isAll ? 'tab-active' : 'tab-inactive'}">Semua <span class="ml-1 opacity-75">${allData.length}</span></button>`;
 
-            const validYears = allData.filter(d => d.tahun_pembuatan > 1950);
+            TERMINALS.forEach(t => {
+                const count = allData.filter(d => d.terminal === t).length;
+                const active = selectedBranch === t;
+                html += `<button onclick="selectBranch('${t}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition ${active ? 'tab-active' : 'tab-inactive'}">${t} <span class="ml-1 text-[10px] opacity-70">${count}</span></button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function selectBranch(branch) {
+            selectedBranch = branch;
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
+        }
+
+        function setChartMode(mode) {
+            chartMode = mode;
+            document.getElementById('btnModeSemua').className = mode === 'semua' 
+                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+            document.getElementById('btnModeUtama').className = mode === 'utama' 
+                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+            updateDashboard();
+        }
+
+        // Plugin untuk menggambar angka total di atas batang & label di dalam pie
+        const barDataLabelsPlugin = {
+            id: 'barDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                ctx.save();
+                ctx.font = 'bold 10px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                const meta0 = chart.getDatasetMeta(0);
+                if (!meta0 || !meta0.data) return;
+
+                for (let i = 0; i < meta0.data.length; i++) {
+                    let total = 0;
+                    let topY = chart.chartArea.bottom;
+                    let xPos = meta0.data[i].x;
+
+                    chart.data.datasets.forEach((ds, dsIdx) => {
+                        const meta = chart.getDatasetMeta(dsIdx);
+                        if (!meta.hidden && ds.data[i] > 0) {
+                            total += ds.data[i];
+                            const bar = meta.data[i];
+                            const barHeight = Math.abs(bar.base - bar.y);
+                            if (bar.y < topY) topY = bar.y;
+                            if (barHeight > 14) {
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillText(ds.data[i], bar.x, bar.y + barHeight / 2);
+                            }
+                        }
+                    });
+
+                    // Kotak total di atas batang
+                    if (total > 0) {
+                        const boxW = 24, boxH = 16;
+                        ctx.fillStyle = '#0f172a';
+                        ctx.beginPath();
+                        ctx.roundRect(xPos - boxW / 2, topY - boxH - 4, boxW, boxH, 4);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillText(total, xPos, topY - boxH / 2 - 4);
+                    }
+                }
+                ctx.restore();
+            }
+        };
+
+        const pieDataLabelsPlugin = {
+            id: 'pieDataLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const ds = chart.data.datasets[0];
+                const meta = chart.getDatasetMeta(0);
+                const total = ds.data.reduce((a, b) => a + b, 0);
+                if (total === 0) return;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#ffffff';
+
+                meta.data.forEach((arc, i) => {
+                    const val = ds.data[i];
+                    if (val > 0) {
+                        const pos = arc.tooltipPosition();
+                        const pct = Math.round((val / total) * 100);
+                        ctx.font = 'bold 11px Inter, sans-serif';
+                        ctx.fillText(val, pos.x, pos.y - 6);
+                        ctx.font = '10px Inter, sans-serif';
+                        ctx.fillText(pct + '%', pos.x, pos.y + 7);
+                    }
+                });
+                ctx.restore();
+            }
+        };
+
+        function updateDashboard() {
+            const scopeData = selectedBranch === 'Semua' ? allData : allData.filter(d => d.terminal === selectedBranch);
+
+            const dermaga = scopeData.filter(d => d.area === 'Alat Utama Dermaga').length;
+            const lapangan = scopeData.filter(d => d.area === 'Alat Utama Lapangan').length;
+            const ops = scopeData.filter(d => d.status === 'Operasional').length;
+            const nonOps = scopeData.filter(d => d.status === 'Non Operasional').length;
+            const belumIsi = scopeData.filter(d => !d.status || d.status === 'Belum Diisi').length;
+            const opsPct = scopeData.length > 0 ? ((ops / scopeData.length) * 100).toFixed(1) : 0;
+
+            const validYears = scopeData.filter(d => d.tahun_pembuatan && d.tahun_pembuatan > 1950);
             const avgAge = validYears.length > 0 
                 ? (validYears.reduce((sum, d) => sum + (2026 - d.tahun_pembuatan), 0) / validYears.length).toFixed(1)
                 : 0;
 
-            document.getElementById('kpiDermaga').innerText = `${dermaga} Unit`;
-            document.getElementById('kpiLapangan').innerText = `${lapangan} Unit`;
-            document.getElementById('kpiOperasional').innerText = `${ops} Unit`;
-            document.getElementById('kpiRataUsia').innerText = `${avgAge} Th`;
+            let oldestText = 'Tertua: -';
+            if (validYears.length > 0) {
+                const oldest = [...validYears].sort((a, b) => a.tahun_pembuatan - b.tahun_pembuatan)[0];
+                oldestText = `Tertua: ${oldest.nomor_alat} · ${2026 - oldest.tahun_pembuatan} th (${oldest.terminal})`;
+            }
 
-            // Data Bar Chart per Terminal
-            const terminals = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
-            const counts = terminals.map(t => allData.filter(d => d.terminal === t).length);
+            document.getElementById('kpiDermaga').innerText = dermaga;
+            document.getElementById('kpiLapangan').innerText = lapangan;
+            document.getElementById('kpiOperasional').innerText = ops;
+            document.getElementById('kpiOpsPct').innerText = `${opsPct}% siap`;
+            document.getElementById('opsProgressBar').style.width = `${opsPct}%`;
+            document.getElementById('kpiNonOps').innerText = `● Non-ops ${nonOps}`;
+            document.getElementById('kpiBelumIsi').innerText = `● Belum diisi ${belumIsi}`;
+            document.getElementById('kpiRataUsia').innerText = avgAge;
+            document.getElementById('kpiTertua').innerText = oldestText;
+
+            // Stacked Bar Chart per Cabang
+            const dermagaArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Dermaga').length);
+            const lapanganArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Lapangan').length);
+            const pendukungArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Pendukung').length);
+
+            const datasets = [
+                { label: 'Alat Utama Dermaga', data: dermagaArr, backgroundColor: '#1e3a8a', borderRadius: 3 },
+                { label: 'Alat Utama Lapangan', data: lapanganArr, backgroundColor: '#3b82f6', borderRadius: 3 }
+            ];
+            if (chartMode === 'semua') {
+                datasets.push({ label: 'Alat Pendukung', data: pendukungArr, backgroundColor: '#94a3b8', borderRadius: 3 });
+            }
+
+            const totalArmadaChart = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
+            document.getElementById('chartTotalFooter').innerText = `Total armada: ${totalArmadaChart} unit`;
 
             if (barChartInstance) barChartInstance.destroy();
             barChartInstance = new Chart(document.getElementById('terminalChart'), {
                 type: 'bar',
-                data: {
-                    labels: terminals,
-                    datasets: [{ label: 'Total Unit', data: counts, backgroundColor: '#1d4ed8', borderRadius: 6 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
+                data: { labels: TERMINALS, datasets },
+                plugins: [barDataLabelsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            selectBranch(selectedBranch === TERMINALS[idx] ? 'Semua' : TERMINALS[idx]);
+                        }
+                    },
+                    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' } }
+                    }
+                }
             });
 
-            // Data Pie Chart 3 Kelompok Usia
+            // Pie / Doughnut Chart 3 Kelompok Usia
             let u1_10 = 0, u10_15 = 0, u20plus = 0;
             validYears.forEach(d => {
                 const age = 2026 - d.tahun_pembuatan;
                 if (age <= 10) u1_10++;
                 else if (age <= 15) u10_15++;
-                else if (age > 20) u20plus++;
+                else u20plus++; // > 15 / > 20 masuk kelompok prioritas peremajaan
             });
+
+            const totalGrouped = u1_10 + u10_15 + u20plus;
+            document.getElementById('lblAge1').innerText = u1_10;
+            document.getElementById('pctAge1').innerText = totalGrouped ? Math.round((u1_10 / totalGrouped) * 100) + '%' : '0%';
+            document.getElementById('lblAge2').innerText = u10_15;
+            document.getElementById('pctAge2').innerText = totalGrouped ? Math.round((u10_15 / totalGrouped) * 100) + '%' : '0%';
+            document.getElementById('lblAge3').innerText = u20plus;
+            document.getElementById('pctAge3').innerText = totalGrouped ? Math.round((u20plus / totalGrouped) * 100) + '%' : '0%';
+
+            document.getElementById('ageSummaryNote').innerHTML = `<b>${u20plus} unit</b> berada di kelompok usia lanjut / <b>Di Atas 20 Tahun</b> dan menjadi prioritas peremajaan RKAP. <b>${u1_10} unit</b> masih berusia 1–10 tahun.`;
 
             if (pieChartInstance) pieChartInstance.destroy();
             pieChartInstance = new Chart(document.getElementById('agePieChart'), {
-                type: 'pie',
+                type: 'doughnut',
                 data: {
                     labels: ['1–10 Tahun', '10–15 Tahun', 'Di Atas 20 Tahun'],
-                    datasets: [{ data: [u1_10, u10_15, u20plus], backgroundColor: ['#10b981', '#3b82f6', '#e11d48'] }]
+                    datasets: [{
+                        data: [u1_10, u10_15, u20plus],
+                        backgroundColor: ['#059669', '#2563eb', '#e11d48'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                plugins: [pieDataLabelsPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '48%',
+                    plugins: { legend: { display: false } }
+                }
             });
+        }
+
+        function filterByArea(area) {
+            document.getElementById('filterArea').value = area;
+            renderTable();
+        }
+
+        function filterByAgeGroup(grp) {
+            document.getElementById('filterAge').value = grp;
+            renderTable();
+        }
+
+        function resetFilters() {
+            selectedBranch = 'Semua';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterArea').value = '';
+            document.getElementById('filterAge').value = '';
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
         }
 
         function renderTable() {
             const q = document.getElementById('searchInput').value.toLowerCase();
+            const areaFilter = document.getElementById('filterArea').value;
+            const ageFilter = document.getElementById('filterAge').value;
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            allData.filter(d => d.nomor_alat.toLowerCase().includes(q) || d.terminal.toLowerCase().includes(q))
-                .forEach(item => {
-                    let actionHtml = '';
-                    if (userRole === 'admin' || userRole === 'editor') {
-                        actionHtml += `<button onclick='openEditModal(${JSON.stringify(item)})' class="text-blue-600 mr-2 cursor-pointer"><i class="fa-solid fa-pen-to-square"></i></button>`;
-                    }
-                    if (userRole === 'admin') {
-                        actionHtml += `<button onclick="deleteAlat(${item.id})" class="text-rose-600 cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>`;
-                    }
+            const filtered = allData.filter(item => {
+                if (selectedBranch !== 'Semua' && item.terminal !== selectedBranch) return false;
+                if (areaFilter && item.area !== areaFilter) return false;
 
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td class="p-3 font-medium">${item.terminal}</td>
-                        <td class="p-3">${item.area}</td>
-                        <td class="p-3">${item.jenis}</td>
-                        <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
-                        <td class="p-3">${item.brand || '-'}</td>
-                        <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
-                        <td class="p-3">${item.status}</td>
-                        ${userRole !== 'viewer' ? `<td class="p-3 text-center">${actionHtml}</td>` : ''}
-                    `;
-                    tbody.appendChild(tr);
-                });
+                if (ageFilter) {
+                    if (!item.tahun_pembuatan) return false;
+                    const age = 2026 - item.tahun_pembuatan;
+                    if (ageFilter === '1-10' && age > 10) return false;
+                    if (ageFilter === '10-15' && (age <= 10 || age > 15)) return false;
+                    if (ageFilter === '20+' && age <= 15) return false;
+                }
+
+                if (q) {
+                    const match = (item.nomor_alat || '').toLowerCase().includes(q) ||
+                                  (item.jenis || '').toLowerCase().includes(q) ||
+                                  (item.brand || '').toLowerCase().includes(q) ||
+                                  (item.terminal || '').toLowerCase().includes(q);
+                    if (!match) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${allData.length} unit`;
+
+            filtered.forEach((item, idx) => {
+                const age = item.tahun_pembuatan ? (2026 - item.tahun_pembuatan) : null;
+                let ageBadge = '<span class="text-slate-400">-</span>';
+                if (age !== null) {
+                    if (age > 20) ageBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[10px]">${age} th</span>`;
+                    else if (age > 15) ageBadge = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">${age} th</span>`;
+                    else ageBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px]">${age} th</span>`;
+                }
+
+                let statusBadge = `<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px]">${item.status || 'Belum Diisi'}</span>`;
+                if (item.status === 'Operasional') statusBadge = `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-semibold text-[10px]">Operasional</span>`;
+                else if (item.status === 'Non Operasional') statusBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-semibold text-[10px]">Non Operasional</span>`;
+
+                let actionHtml = '';
+                if (userRole === 'admin' || userRole === 'editor') {
+                    actionHtml += `<button onclick='openEditModal(${JSON.stringify(item)})' class="text-blue-600 hover:text-blue-800 mr-2 cursor-pointer" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>`;
+                }
+                if (userRole === 'admin') {
+                    actionHtml += `<button onclick="deleteAlat(${item.id})" class="text-rose-600 hover:text-rose-800 cursor-pointer" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition';
+                tr.innerHTML = `
+                    <td class="p-3 font-medium text-slate-400">${idx + 1}</td>
+                    <td class="p-3 font-semibold text-slate-800">${item.terminal}</td>
+                    <td class="p-3">${item.area}</td>
+                    <td class="p-3 font-bold text-slate-700">${item.jenis}</td>
+                    <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
+                    <td class="p-3">${item.brand || '-'}</td>
+                    <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
+                    <td class="p-3 text-center">${ageBadge}</td>
+                    <td class="p-3">${statusBadge}</td>
+                    ${userRole !== 'viewer' ? `<td class="p-3 text-center">${actionHtml}</td>` : ''}
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function openModal() {
             document.getElementById('editId').value = '';
+            document.getElementById('inJenis').value = '';
+            document.getElementById('inNomor').value = '';
+            document.getElementById('inBrand').value = '';
+            document.getElementById('inTahun').value = '';
             document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
             document.getElementById('modalForm').classList.remove('hidden');
             document.getElementById('modalForm').classList.add('flex');
@@ -363,7 +783,7 @@
             document.getElementById('inNomor').value = item.nomor_alat;
             document.getElementById('inBrand').value = item.brand || '';
             document.getElementById('inTahun').value = item.tahun_pembuatan || '';
-            document.getElementById('inStatus').value = item.status;
+            document.getElementById('inStatus').value = item.status || 'Operasional';
             document.getElementById('modalTitle').innerText = 'Edit Data Alat';
             document.getElementById('modalForm').classList.remove('hidden');
             document.getElementById('modalForm').classList.add('flex');
@@ -379,22 +799,24 @@
             const payload = {
                 terminal: document.getElementById('inTerminal').value,
                 area: document.getElementById('inArea').value,
-                jenis: document.getElementById('inJenis').value,
-                nomor_alat: document.getElementById('inNomor').value,
-                brand: document.getElementById('inBrand').value,
+                jenis: document.getElementById('inJenis').value.trim(),
+                nomor_alat: document.getElementById('inNomor').value.trim(),
+                brand: document.getElementById('inBrand').value.trim() || '-',
                 tahun_pembuatan: parseInt(document.getElementById('inTahun').value) || null,
                 status: document.getElementById('inStatus').value
             };
 
-            let res;
-            if (id) {
-                res = await supabaseClient.from('peralatan').update(payload).eq('id', id);
-            } else {
-                res = await supabaseClient.from('peralatan').insert([payload]);
+            if (!payload.jenis || !payload.nomor_alat) {
+                alert('Jenis alat dan nomor alat wajib diisi.');
+                return;
             }
 
+            const res = id 
+                ? await supabaseClient.from('peralatan').update(payload).eq('id', id)
+                : await supabaseClient.from('peralatan').insert([payload]);
+
             if (res.error) {
-                alert('Gagal menyimpan (Cek hak akses Anda): ' + res.error.message);
+                alert('Gagal menyimpan data: ' + res.error.message);
                 return;
             }
             closeModal();
@@ -402,13 +824,25 @@
         }
 
         async function deleteAlat(id) {
-            if (!confirm('Hapus permanen data alat ini dari database?')) return;
+            if (!confirm('Hapus permanen data alat ini dari database Supabase?')) return;
             const { error } = await supabaseClient.from('peralatan').delete().eq('id', id);
             if (error) {
                 alert('Gagal menghapus (Hanya Admin yang diizinkan): ' + error.message);
                 return;
             }
             await loadData();
+        }
+
+        function exportCSV() {
+            const headers = ['Terminal', 'Area', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Status'];
+            const rows = allData.map(d => [d.terminal, d.area, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.status]);
+            const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Database_SIMALAT_IPCTPK_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
         }
 
         window.onload = checkSession;
