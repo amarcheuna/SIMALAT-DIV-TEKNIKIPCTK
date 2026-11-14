@@ -85,7 +85,10 @@
                 <div class="flex flex-wrap items-center gap-1.5" id="branchTabs"></div>
                 <div class="flex items-center space-x-2">
                     <button onclick="exportCSV()" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
-                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel / CSV
+                        <i class="fa-solid fa-file-excel mr-1.5"></i> Ekspor Excel
+                    </button>
+                    <button onclick="exportCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition">
+                        CSV
                     </button>
                     <button id="btnAddTop" onclick="openModal()" class="hidden bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center cursor-pointer transition">
                         <i class="fa-solid fa-plus mr-1.5"></i> Tambah Alat
@@ -95,47 +98,121 @@
         </div>
 
         <!-- MAIN DASHBOARD CONTENT -->
-        <main class="max-w-7xl mx-auto px-4 py-5 space-y-5 flex-1 w-full">
+        <main class="max-w-7xl mx-auto px-4 py-4 space-y-4 flex-1 w-full">
 
-            <!-- BARIS 1 KPI: DERMAGA, LAPANGAN, STATUS OPERASIONAL, RATA-RATA USIA -->
+            <!-- BANNER MODE AKSES & SCOPE -->
+            <div class="bg-blue-50/80 border border-blue-200/80 rounded-xl px-4 py-2.5 flex flex-wrap justify-between items-center gap-2 text-xs">
+                <div class="flex items-center space-x-2 text-blue-950">
+                    <i class="fa-solid fa-user-shield text-blue-700"></i>
+                    <span id="modeBannerText"><b>Mode Admin:</b> akses penuh untuk menambah, mengedit dan menghapus data alat.</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="inline-flex items-center space-x-1.5 text-[11px] text-slate-600 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                        <input type="checkbox" id="chkIncludePassive" onchange="onTogglePassive()" class="rounded text-blue-600">
+                        <span>Sertakan Chassis & Spreader (211 unit)</span>
+                    </label>
+                    <span id="scopeSummaryBadge" class="bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-700 shadow-2xs">
+                        Seluruh 6 terminal · 154 unit
+                    </span>
+                </div>
+            </div>
+
+            <!-- HEADER KATEGORI ALAT -->
+            <div class="flex justify-between items-center text-[11px] text-slate-400 px-0.5">
+                <span><b class="text-slate-600 uppercase tracking-wider">KATEGORI ALAT</b> · klik kartu untuk memfilter tabel</span>
+                <span id="totalAlatLabel" class="font-semibold text-slate-500">Total 154 alat</span>
+            </div>
+
+            <!-- BARIS 1 KPI: 4 KARTU KATEGORI (DERMAGA, LAPANGAN, PENDUKUNG, ANGKUT) -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- KPI 1: Total Alat Dermaga -->
-                <div onclick="filterByArea('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
+                <!-- KPI 1: Alat Utama Dermaga -->
+                <div onclick="filterByCategory('Alat Utama Dermaga')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-blue-400 cursor-pointer transition flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL ALAT DERMAGA</p>
-                            <div class="flex items-baseline space-x-2 mt-1">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT UTAMA DERMAGA</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
                                 <h3 id="kpiDermaga" class="text-3xl font-black text-slate-900">0</h3>
-                                <span class="text-xs font-semibold text-slate-500">unit</span>
+                                <span id="kpiDermagaPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-blue-50 text-blue-700 rounded-xl"><i class="fa-solid fa-ship text-lg"></i></div>
+                        <div class="p-2.5 bg-blue-50 text-blue-800 rounded-xl"><i class="fa-solid fa-anchor text-base"></i></div>
                     </div>
-                    <p class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex justify-between">
-                        <span>QCC · GLC · GJC · FJC</span>
-                        <span class="text-blue-600 font-semibold">Filter →</span>
-                    </p>
+                    <div class="mt-3 pt-2 border-t border-slate-100">
+                        <p id="subDermaga" class="text-[10px] text-slate-400 truncate">QCC · GLC · FJC · GJC</p>
+                        <div class="flex justify-between items-center text-[11px] mt-0.5">
+                            <span id="opsDermaga" class="font-semibold text-slate-700">0 operasional</span>
+                            <span class="text-blue-600 font-semibold">Filter →</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- KPI 2: Total Alat Lapangan -->
-                <div onclick="filterByArea('Alat Utama Lapangan')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-indigo-400 cursor-pointer transition flex flex-col justify-between">
+                <!-- KPI 2: Alat Utama Lapangan -->
+                <div onclick="filterByCategory('Alat Utama Lapangan')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-indigo-400 cursor-pointer transition flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL ALAT LAPANGAN</p>
-                            <div class="flex items-baseline space-x-2 mt-1">
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT UTAMA LAPANGAN</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
                                 <h3 id="kpiLapangan" class="text-3xl font-black text-slate-900">0</h3>
-                                <span class="text-xs font-semibold text-slate-500">unit</span>
+                                <span id="kpiLapanganPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl"><i class="fa-solid fa-cubes-stacked text-lg"></i></div>
+                        <div class="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl"><i class="fa-solid fa-cubes-stacked text-base"></i></div>
                     </div>
-                    <p class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex justify-between">
-                        <span>RTG · RMGC</span>
-                        <span class="text-indigo-600 font-semibold">Filter →</span>
-                    </p>
+                    <div class="mt-3 pt-2 border-t border-slate-100">
+                        <p id="subLapangan" class="text-[10px] text-slate-400 truncate">RTG · RMGC</p>
+                        <div class="flex justify-between items-center text-[11px] mt-0.5">
+                            <span id="opsLapangan" class="font-semibold text-slate-700">0 operasional</span>
+                            <span class="text-indigo-600 font-semibold">Filter →</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- KPI 3: Status Operasional -->
+                <!-- KPI 3: Alat Pendukung -->
+                <div onclick="filterByCategory('Alat Pendukung')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-slate-400 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT PENDUKUNG</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
+                                <h3 id="kpiPendukung" class="text-3xl font-black text-slate-900">0</h3>
+                                <span id="kpiPendukungPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-slate-100 text-slate-700 rounded-xl"><i class="fa-solid fa-screwdriver-wrench text-base"></i></div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-100">
+                        <p id="subPendukung" class="text-[10px] text-slate-400 truncate">RST · FLT · SIL</p>
+                        <div class="flex justify-between items-center text-[11px] mt-0.5">
+                            <span id="opsPendukung" class="font-semibold text-slate-700">0 operasional</span>
+                            <span class="text-slate-600 font-semibold">Filter →</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI 4: Alat Angkut -->
+                <div onclick="filterByCategory('Alat Angkut')" class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 hover:border-teal-400 cursor-pointer transition flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ALAT ANGKUT</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
+                                <h3 id="kpiAngkut" class="text-3xl font-black text-slate-900">0</h3>
+                                <span id="kpiAngkutPct" class="text-xs font-medium text-slate-400">unit · 0%</span>
+                            </div>
+                        </div>
+                        <div class="p-2.5 bg-teal-50 text-teal-700 rounded-xl"><i class="fa-solid fa-truck-front text-base"></i></div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-100">
+                        <p id="subAngkut" class="text-[10px] text-slate-400 truncate">HDT · TTR</p>
+                        <div class="flex justify-between items-center text-[11px] mt-0.5">
+                            <span id="opsAngkut" class="font-semibold text-slate-700">0 operasional</span>
+                            <span class="text-teal-700 font-semibold">Filter →</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BARIS 2 KPI: STATUS OPERASIONAL, RATA-RATA USIA ALAT, SUMBER ENERGI PENGGERAK (3 KOLOM) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Status Operasional -->
                 <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
@@ -145,7 +222,7 @@
                                 <span id="kpiOpsPct" class="px-2 py-0.5 text-[11px] font-bold bg-emerald-50 text-emerald-700 rounded-full">0% siap</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                        <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl"><i class="fa-solid fa-circle-check text-base"></i></div>
                     </div>
                     <div class="mt-3">
                         <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -158,47 +235,43 @@
                     </div>
                 </div>
 
-                <!-- KPI 4: Rata-Rata Usia Alat -->
+                <!-- Rata-Rata Usia Alat -->
                 <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RATA-RATA USIA ALAT</p>
                             <div class="flex items-baseline space-x-1.5 mt-1">
-                                <h3 id="kpiRataUsia" class="text-3xl font-black text-amber-600">0</h3>
-                                <span class="text-xs font-semibold text-slate-500">tahun</span>
+                                <h3 id="kpiRataUsia" class="text-3xl font-black text-slate-900">0</h3>
+                                <span class="text-xs font-medium text-slate-400">tahun</span>
                             </div>
                         </div>
-                        <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-hourglass-half text-lg"></i></div>
+                        <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl"><i class="fa-solid fa-hourglass-half text-base"></i></div>
                     </div>
                     <p id="kpiTertua" class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 truncate">
                         Tertua: -
                     </p>
                 </div>
-            </div>
 
-            <!-- BARIS 2 KPI: SUMBER ENERGI PENGGERAK (BBM, LISTRIK, HYBRID, BELUM DIISI) -->
-            <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
-                <div class="flex flex-wrap justify-between items-center gap-4">
-                    <div class="flex items-center space-x-3">
-                        <div class="p-3 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-xl"></i></div>
+                <!-- Sumber Energi Penggerak -->
+                <div class="bg-white p-4 rounded-xl shadow-xs border border-slate-200 flex flex-col justify-between">
+                    <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK (ALAT BERPENGGERAK / NON-CHASSIS)</p>
-                            <div class="flex items-baseline space-x-2 mt-0.5">
-                                <h3 id="kpiEnergiBBM" class="text-2xl font-black text-orange-600">0</h3>
-                                <span id="kpiEnergiBBMPct" class="text-xs font-semibold text-slate-600">alat BBM · 0%</span>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">SUMBER ENERGI PENGGERAK</p>
+                            <div class="flex items-baseline space-x-1.5 mt-1">
+                                <h3 id="kpiEnergiBBM" class="text-3xl font-black text-orange-600">0</h3>
+                                <span id="kpiEnergiBBMPct" class="text-xs font-medium text-slate-500">alat BBM · 0%</span>
                             </div>
                         </div>
+                        <div class="p-2.5 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-bolt text-base"></i></div>
                     </div>
-
-                    <div class="flex-1 min-w-[240px] max-w-xl">
-                        <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
-                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%" title="BBM"></div>
-                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%" title="Listrik"></div>
-                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%" title="Hybrid"></div>
-                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%" title="Belum Diisi"></div>
+                    <div class="mt-3">
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden flex">
+                            <div id="barBBM" class="bg-orange-500 h-full" style="width: 0%"></div>
+                            <div id="barListrik" class="bg-emerald-500 h-full" style="width: 0%"></div>
+                            <div id="barHybrid" class="bg-purple-600 h-full" style="width: 0%"></div>
+                            <div id="barEnergiEmpty" class="bg-slate-300 h-full" style="width: 0%"></div>
                         </div>
-                        <div class="flex flex-wrap justify-between gap-3 text-[11px] font-semibold mt-2">
-                            <button onclick="filterByEnergy('BBM')" class="text-orange-600 hover:underline cursor-pointer">● BBM <span id="cntBBM">0</span></button>
+                        <div class="flex flex-wrap justify-between text-[10px] font-semibold mt-1.5">
                             <button onclick="filterByEnergy('Listrik')" class="text-emerald-600 hover:underline cursor-pointer">● Listrik <span id="cntListrik">0</span></button>
                             <button onclick="filterByEnergy('Hybrid')" class="text-purple-600 hover:underline cursor-pointer">● Hybrid <span id="cntHybrid">0</span></button>
                             <button onclick="filterByEnergy('Belum Diisi')" class="text-slate-500 hover:underline cursor-pointer">● Belum Diisi <span id="cntEnergiEmpty">0</span></button>
@@ -207,7 +280,7 @@
                 </div>
             </div>
 
-            <!-- CHARTS ROW (Stacked Bar + Doughnut 3 Kelompok Usia) -->
+            <!-- CHARTS ROW (Stacked Bar 4 Kategori + Doughnut 3 Kelompok Usia) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 
                 <!-- CHART 1: SEBARAN ARMADA PER CABANG & KATEGORI -->
@@ -216,11 +289,11 @@
                         <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
                             <div>
                                 <h3 class="font-bold text-slate-900 text-sm">Sebaran Armada per Cabang & Kategori</h3>
-                                <p class="text-[11px] text-slate-400">Total unit tampil langsung di atas setiap batang · klik batang untuk memfilter</p>
+                                <p class="text-[11px] text-slate-400">Total unit tampil di atas setiap batang · klik batang untuk memfilter</p>
                             </div>
                             <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-[11px] font-semibold">
-                                <button id="btnModeSemua" onclick="setChartMode('semua')" class="px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition">Semua armada</button>
-                                <button id="btnModeUtama" onclick="setChartMode('utama')" class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition">Alat utama saja</button>
+                                <button id="btnModeSemua" onclick="setChartMode('semua')" class="px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer transition">Semua armada</button>
+                                <button id="btnModeUtama" onclick="setChartMode('utama')" class="px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 cursor-pointer transition">Alat utama saja</button>
                             </div>
                         </div>
                         <div class="relative h-72 w-full">
@@ -228,8 +301,8 @@
                         </div>
                     </div>
                     <div class="mt-3 pt-2.5 border-t border-slate-100 flex justify-between items-center text-[11px] text-slate-400">
-                        <span>Sumber: database real-time Supabase IPC TPK</span>
-                        <span id="chartTotalFooter" class="font-bold text-slate-700">Total armada: 0 unit</span>
+                        <span>Sumber: database alat (seluruh terminal)</span>
+                        <span id="chartTotalFooter" class="font-bold text-slate-700">Total armada: 154 unit</span>
                     </div>
                 </div>
 
@@ -300,15 +373,16 @@
             <div class="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
                 <div class="p-4 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
                     <div class="flex flex-wrap items-center gap-2">
-                        <div class="relative w-60">
+                        <div class="relative w-56">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search text-xs"></i></span>
                             <input type="text" id="searchInput" onkeyup="renderTable()" placeholder="Cari no. alat, jenis, brand..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-blue-600">
                         </div>
-                        <select id="filterArea" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
-                            <option value="">Semua Area Alat</option>
+                        <select id="filterCategory" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
+                            <option value="">Semua Kategori (4 Kelompok)</option>
                             <option value="Alat Utama Dermaga">Alat Utama Dermaga</option>
                             <option value="Alat Utama Lapangan">Alat Utama Lapangan</option>
                             <option value="Alat Pendukung">Alat Pendukung</option>
+                            <option value="Alat Angkut">Alat Angkut</option>
                         </select>
                         <select id="filterAge" onchange="renderTable()" class="py-1.5 px-3 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none">
                             <option value="">Semua Kelompok Usia</option>
@@ -322,9 +396,8 @@
                             <option value="Listrik">Listrik</option>
                             <option value="Hybrid">Hybrid</option>
                             <option value="Belum Diisi">Belum Diisi</option>
-                            <option value="Non-Engine">Non-Engine (Chassis/Spreader)</option>
                         </select>
-                        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset Filter</button>
+                        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline px-2 cursor-pointer">Reset</button>
                     </div>
                     <span id="tableCountBadge" class="text-xs font-semibold text-slate-500">Menampilkan 0 data</span>
                 </div>
@@ -335,7 +408,7 @@
                             <tr>
                                 <th class="p-3">No</th>
                                 <th class="p-3">Terminal</th>
-                                <th class="p-3">Area Alat</th>
+                                <th class="p-3">Kategori</th>
                                 <th class="p-3">Jenis</th>
                                 <th class="p-3">Nomor Alat</th>
                                 <th class="p-3">Brand</th>
@@ -436,14 +509,31 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhY25wc2pob2Zlc3RxcmdzZnZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2MzA5NzgsImV4cCI6MjExMDIwNjk3OH0.8pQdGTiL_KZYI_l2JYvt_7WfpceLpXIJn8rcU60yWsg';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        let allData = [];
+        let rawData = [];
         let userRole = 'viewer';
         let selectedBranch = 'Semua';
         let chartMode = 'semua';
+        let includePassive = false;
         let barChartInstance = null;
         let pieChartInstance = null;
 
         const TERMINALS = ['Tanjung Priok', 'Panjang', 'Jambi', 'Teluk Bayur', 'Palembang', 'Pontianak'];
+
+        // Klasifikasi 4 kategori persis seperti desain referensi
+        function getFourCategory(item) {
+            if (item.area === 'Alat Utama Dermaga') return 'Alat Utama Dermaga';
+            if (item.area === 'Alat Utama Lapangan') return 'Alat Utama Lapangan';
+            if (item.jenis === 'HDT' || item.jenis === 'TTR') return 'Alat Angkut';
+            return 'Alat Pendukung';
+        }
+
+        function isPassiveEquipment(item) {
+            return item.jenis === 'CHS' || item.jenis === 'SPREADER' || item.sumber_energi === 'Non-Engine';
+        }
+
+        function getActiveDataset() {
+            return includePassive ? rawData : rawData.filter(d => !isPassiveEquipment(d));
+        }
 
         async function checkSession() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -482,10 +572,16 @@
             document.getElementById('userEmailDisplay').innerText = user.email;
             document.getElementById('roleBadge').innerText = userRole;
 
-            if (userRole === 'admin' || userRole === 'editor') {
+            const bannerEl = document.getElementById('modeBannerText');
+            if (userRole === 'admin') {
                 document.getElementById('btnAddTop').classList.remove('hidden');
+                bannerEl.innerHTML = '<b>Mode Admin:</b> akses penuh untuk menambah, mengedit dan menghapus data alat.';
+            } else if (userRole === 'editor') {
+                document.getElementById('btnAddTop').classList.remove('hidden');
+                bannerEl.innerHTML = '<b>Mode Editor:</b> dapat menambah dan memperbarui data operasional alat.';
             } else {
                 document.getElementById('colAksiHeader').classList.add('hidden');
+                bannerEl.innerHTML = '<b>Mode Viewer:</b> akses pemantauan eksekutif dan ekspor laporan (hanya baca).';
             }
 
             await loadData();
@@ -497,21 +593,29 @@
                 alert('Gagal memuat data: ' + error.message);
                 return;
             }
-            allData = data || [];
+            rawData = (data || []).map(d => ({ ...d, kategori4: getFourCategory(d) }));
+            renderBranchTabs();
+            updateDashboard();
+            renderTable();
+        }
+
+        function onTogglePassive() {
+            includePassive = document.getElementById('chkIncludePassive').checked;
             renderBranchTabs();
             updateDashboard();
             renderTable();
         }
 
         function renderBranchTabs() {
+            const baseData = getActiveDataset();
             const container = document.getElementById('branchTabs');
             let html = `<span class="text-[11px] font-bold text-slate-400 mr-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1"></i>CABANG</span>`;
             
             const isAll = selectedBranch === 'Semua';
-            html += `<button onclick="selectBranch('Semua')" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isAll ? 'tab-active' : 'tab-inactive'}">Semua <span class="ml-1 opacity-75">${allData.length}</span></button>`;
+            html += `<button onclick="selectBranch('Semua')" class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition ${isAll ? 'tab-active' : 'tab-inactive'}">Semua <span class="ml-1 opacity-75">${baseData.length}</span></button>`;
 
             TERMINALS.forEach(t => {
-                const count = allData.filter(d => d.terminal === t).length;
+                const count = baseData.filter(d => d.terminal === t).length;
                 const active = selectedBranch === t;
                 html += `<button onclick="selectBranch('${t}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition ${active ? 'tab-active' : 'tab-inactive'}">${t} <span class="ml-1 text-[10px] opacity-70">${count}</span></button>`;
             });
@@ -528,11 +632,11 @@
         function setChartMode(mode) {
             chartMode = mode;
             document.getElementById('btnModeSemua').className = mode === 'semua' 
-                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
-                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+                ? 'px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 cursor-pointer transition';
             document.getElementById('btnModeUtama').className = mode === 'utama' 
-                ? 'px-2.5 py-1 rounded-md bg-slate-900 text-white cursor-pointer transition' 
-                : 'px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 cursor-pointer transition';
+                ? 'px-2.5 py-1 rounded-md bg-white text-slate-900 shadow-2xs cursor-pointer transition' 
+                : 'px-2.5 py-1 rounded-md text-slate-500 hover:text-slate-900 cursor-pointer transition';
             updateDashboard();
         }
 
@@ -560,7 +664,7 @@
                             const bar = meta.data[i];
                             const barHeight = Math.abs(bar.base - bar.y);
                             if (bar.y < topY) topY = bar.y;
-                            if (barHeight > 14) {
+                            if (barHeight > 13) {
                                 ctx.fillStyle = '#ffffff';
                                 ctx.fillText(ds.data[i], bar.x, bar.y + barHeight / 2);
                             }
@@ -610,16 +714,65 @@
             }
         };
 
-        function updateDashboard() {
-            const scopeData = selectedBranch === 'Semua' ? allData : allData.filter(d => d.terminal === selectedBranch);
+        function summarizeTypes(list, orderTypes) {
+            const counts = {};
+            list.forEach(d => { counts[d.jenis] = (counts[d.jenis] || 0) + 1; });
+            const keys = orderTypes ? orderTypes.filter(k => counts[k]) : Object.keys(counts);
+            Object.keys(counts).forEach(k => { if (!keys.includes(k)) keys.push(k); });
+            return keys.length ? keys.map(k => `${k} ${counts[k]}`).join(' · ') : '-';
+        }
 
-            const dermaga = scopeData.filter(d => d.area === 'Alat Utama Dermaga').length;
-            const lapangan = scopeData.filter(d => d.area === 'Alat Utama Lapangan').length;
+        function updateDashboard() {
+            const baseData = getActiveDataset();
+            const scopeData = selectedBranch === 'Semua' ? baseData : baseData.filter(d => d.terminal === selectedBranch);
+            const totScope = scopeData.length;
+
+            document.getElementById('scopeSummaryBadge').innerText = selectedBranch === 'Semua' 
+                ? `Seluruh 6 terminal · ${totScope} unit` 
+                : `Cabang ${selectedBranch} · ${totScope} unit`;
+            document.getElementById('totalAlatLabel').innerText = `Total ${totScope} alat`;
+
+            // 4 Kategori KPI
+            const dDermaga = scopeData.filter(d => d.kategori4 === 'Alat Utama Dermaga');
+            const dLapangan = scopeData.filter(d => d.kategori4 === 'Alat Utama Lapangan');
+            const dPendukung = scopeData.filter(d => d.kategori4 === 'Alat Pendukung');
+            const dAngkut = scopeData.filter(d => d.kategori4 === 'Alat Angkut');
+
+            const pct = (n) => totScope > 0 ? Math.round((n / totScope) * 100) : 0;
+
+            document.getElementById('kpiDermaga').innerText = dDermaga.length;
+            document.getElementById('kpiDermagaPct').innerText = `unit · ${pct(dDermaga.length)}%`;
+            document.getElementById('subDermaga').innerText = summarizeTypes(dDermaga, ['QCC', 'GLC', 'FJC', 'GJC']);
+            document.getElementById('opsDermaga').innerText = `${dDermaga.filter(d => d.status === 'Operasional').length} operasional`;
+
+            document.getElementById('kpiLapangan').innerText = dLapangan.length;
+            document.getElementById('kpiLapanganPct').innerText = `unit · ${pct(dLapangan.length)}%`;
+            document.getElementById('subLapangan').innerText = summarizeTypes(dLapangan, ['RTG', 'RMGC']);
+            document.getElementById('opsLapangan').innerText = `${dLapangan.filter(d => d.status === 'Operasional').length} operasional`;
+
+            document.getElementById('kpiPendukung').innerText = dPendukung.length;
+            document.getElementById('kpiPendukungPct').innerText = `unit · ${pct(dPendukung.length)}%`;
+            document.getElementById('subPendukung').innerText = summarizeTypes(dPendukung, ['RST', 'FLT', 'SIL']);
+            document.getElementById('opsPendukung').innerText = `${dPendukung.filter(d => d.status === 'Operasional').length} operasional`;
+
+            document.getElementById('kpiAngkut').innerText = dAngkut.length;
+            document.getElementById('kpiAngkutPct').innerText = `unit · ${pct(dAngkut.length)}%`;
+            document.getElementById('subAngkut').innerText = summarizeTypes(dAngkut, ['HDT', 'TTR']);
+            document.getElementById('opsAngkut').innerText = `${dAngkut.filter(d => d.status === 'Operasional').length} operasional`;
+
+            // Status Operasional
             const ops = scopeData.filter(d => d.status === 'Operasional').length;
             const nonOps = scopeData.filter(d => d.status === 'Non Operasional').length;
             const belumIsi = scopeData.filter(d => !d.status || d.status === 'Belum Diisi').length;
-            const opsPct = scopeData.length > 0 ? ((ops / scopeData.length) * 100).toFixed(1) : 0;
+            const opsPct = totScope > 0 ? ((ops / totScope) * 100).toFixed(1) : 0;
 
+            document.getElementById('kpiOperasional').innerText = ops;
+            document.getElementById('kpiOpsPct').innerText = `${opsPct}% siap`;
+            document.getElementById('opsProgressBar').style.width = `${opsPct}%`;
+            document.getElementById('kpiNonOps').innerText = `● Non-ops ${nonOps}`;
+            document.getElementById('kpiBelumIsi').innerText = `● Belum diisi ${belumIsi}`;
+
+            // Rata-Rata Usia Alat
             const validYears = scopeData.filter(d => d.tahun_pembuatan && d.tahun_pembuatan > 1950);
             const avgAge = validYears.length > 0 
                 ? (validYears.reduce((sum, d) => sum + (2026 - d.tahun_pembuatan), 0) / validYears.length).toFixed(1)
@@ -628,21 +781,13 @@
             let oldestText = 'Tertua: -';
             if (validYears.length > 0) {
                 const oldest = [...validYears].sort((a, b) => a.tahun_pembuatan - b.tahun_pembuatan)[0];
-                oldestText = `Tertua: ${oldest.nomor_alat} · ${2026 - oldest.tahun_pembuatan} th (${oldest.terminal})`;
+                oldestText = `Tertua: ${oldest.nomor_alat} · ${2026 - oldest.tahun_pembuatan} th (${oldest.terminal.toUpperCase()})`;
             }
-
-            document.getElementById('kpiDermaga').innerText = dermaga;
-            document.getElementById('kpiLapangan').innerText = lapangan;
-            document.getElementById('kpiOperasional').innerText = ops;
-            document.getElementById('kpiOpsPct').innerText = `${opsPct}% siap`;
-            document.getElementById('opsProgressBar').style.width = `${opsPct}%`;
-            document.getElementById('kpiNonOps').innerText = `● Non-ops ${nonOps}`;
-            document.getElementById('kpiBelumIsi').innerText = `● Belum diisi ${belumIsi}`;
             document.getElementById('kpiRataUsia').innerText = avgAge;
             document.getElementById('kpiTertua').innerText = oldestText;
 
-            // Update Sumber Energi Penggerak (Non-Chassis/Spreader)
-            const poweredUnits = scopeData.filter(d => (d.sumber_energi || 'BBM') !== 'Non-Engine' && d.jenis !== 'CHS' && d.jenis !== 'SPREADER');
+            // Sumber Energi Penggerak
+            const poweredUnits = scopeData.filter(d => !isPassiveEquipment(d));
             const cBBM = poweredUnits.filter(d => (d.sumber_energi || 'BBM') === 'BBM').length;
             const cListrik = poweredUnits.filter(d => d.sumber_energi === 'Listrik').length;
             const cHybrid = poweredUnits.filter(d => d.sumber_energi === 'Hybrid').length;
@@ -652,7 +797,6 @@
 
             document.getElementById('kpiEnergiBBM').innerText = cBBM;
             document.getElementById('kpiEnergiBBMPct').innerText = `alat BBM · ${pctBBM}%`;
-            document.getElementById('cntBBM').innerText = cBBM;
             document.getElementById('cntListrik').innerText = cListrik;
             document.getElementById('cntHybrid').innerText = cHybrid;
             document.getElementById('cntEnergiEmpty').innerText = cEmpty;
@@ -662,17 +806,19 @@
             document.getElementById('barHybrid').style.width = totPowered ? `${(cHybrid / totPowered) * 100}%` : '0%';
             document.getElementById('barEnergiEmpty').style.width = totPowered ? `${(cEmpty / totPowered) * 100}%` : '0%';
 
-            // Stacked Bar Chart per Cabang
-            const dermagaArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Dermaga').length);
-            const lapanganArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Utama Lapangan').length);
-            const pendukungArr = TERMINALS.map(t => allData.filter(d => d.terminal === t && d.area === 'Alat Pendukung').length);
+            // Stacked Bar Chart 4 Kategori per Cabang
+            const dermagaArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Utama Dermaga').length);
+            const lapanganArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Utama Lapangan').length);
+            const pendukungArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Pendukung').length);
+            const angkutArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Angkut').length);
 
             const datasets = [
-                { label: 'Alat Utama Dermaga', data: dermagaArr, backgroundColor: '#1e3a8a', borderRadius: 3 },
-                { label: 'Alat Utama Lapangan', data: lapanganArr, backgroundColor: '#3b82f6', borderRadius: 3 }
+                { label: 'Alat Utama Dermaga', data: dermagaArr, backgroundColor: '#1e3a8a', borderRadius: 2 },
+                { label: 'Alat Utama Lapangan', data: lapanganArr, backgroundColor: '#3b82f6', borderRadius: 2 }
             ];
             if (chartMode === 'semua') {
-                datasets.push({ label: 'Alat Pendukung', data: pendukungArr, backgroundColor: '#94a3b8', borderRadius: 3 });
+                datasets.push({ label: 'Alat Pendukung', data: pendukungArr, backgroundColor: '#94a3b8', borderRadius: 2 });
+                datasets.push({ label: 'Alat Angkut', data: angkutArr, backgroundColor: '#0f766e', borderRadius: 2 });
             }
 
             const totalArmadaChart = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
@@ -701,13 +847,16 @@
                 }
             });
 
-            // Pie / Doughnut Chart 3 Kelompok Usia
-            let u1_10 = 0, u10_15 = 0, u20plus = 0;
+            // Doughnut Chart 3 Kelompok Usia
+            let u1_10 = 0, u10_15 = 0, u20plus = 0, trulyAbove20 = 0;
             validYears.forEach(d => {
                 const age = 2026 - d.tahun_pembuatan;
                 if (age <= 10) u1_10++;
                 else if (age <= 15) u10_15++;
-                else u20plus++;
+                else {
+                    u20plus++;
+                    if (age > 20) trulyAbove20++;
+                }
             });
 
             const totalGrouped = u1_10 + u10_15 + u20plus;
@@ -718,7 +867,8 @@
             document.getElementById('lblAge3').innerText = u20plus;
             document.getElementById('pctAge3').innerText = totalGrouped ? Math.round((u20plus / totalGrouped) * 100) + '%' : '0%';
 
-            document.getElementById('ageSummaryNote').innerHTML = `<b>${u20plus} unit</b> berada di kelompok usia lanjut / <b>Di Atas 20 Tahun</b> dan menjadi prioritas peremajaan RKAP. <b>${u1_10} unit</b> masih berusia 1–10 tahun.`;
+            const midOlder = u20plus - trulyAbove20;
+            document.getElementById('ageSummaryNote').innerHTML = `<b>${u20plus} unit</b> berada di kelompok <b>Di Atas 20 Tahun</b> (${trulyAbove20} unit benar-benar > 20 th, sisanya ${midOlder} unit 16–20 th) dan menjadi prioritas peremajaan. <b>${u1_10} unit</b> masih berusia 1–10 tahun.`;
 
             if (pieChartInstance) pieChartInstance.destroy();
             pieChartInstance = new Chart(document.getElementById('agePieChart'), {
@@ -742,8 +892,8 @@
             });
         }
 
-        function filterByArea(area) {
-            document.getElementById('filterArea').value = area;
+        function filterByCategory(cat) {
+            document.getElementById('filterCategory').value = cat;
             renderTable();
         }
 
@@ -760,7 +910,7 @@
         function resetFilters() {
             selectedBranch = 'Semua';
             document.getElementById('searchInput').value = '';
-            document.getElementById('filterArea').value = '';
+            document.getElementById('filterCategory').value = '';
             document.getElementById('filterAge').value = '';
             document.getElementById('filterEnergy').value = '';
             renderBranchTabs();
@@ -769,16 +919,17 @@
         }
 
         function renderTable() {
+            const baseData = getActiveDataset();
             const q = document.getElementById('searchInput').value.toLowerCase();
-            const areaFilter = document.getElementById('filterArea').value;
+            const catFilter = document.getElementById('filterCategory').value;
             const ageFilter = document.getElementById('filterAge').value;
             const energyFilter = document.getElementById('filterEnergy').value;
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            const filtered = allData.filter(item => {
+            const filtered = baseData.filter(item => {
                 if (selectedBranch !== 'Semua' && item.terminal !== selectedBranch) return false;
-                if (areaFilter && item.area !== areaFilter) return false;
+                if (catFilter && item.kategori4 !== catFilter) return false;
                 if (energyFilter && (item.sumber_energi || 'BBM') !== energyFilter) return false;
 
                 if (ageFilter) {
@@ -799,7 +950,7 @@
                 return true;
             });
 
-            document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${allData.length} unit`;
+            document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${baseData.length} unit`;
 
             filtered.forEach((item, idx) => {
                 const age = item.tahun_pembuatan ? (2026 - item.tahun_pembuatan) : null;
@@ -833,7 +984,7 @@
                 tr.innerHTML = `
                     <td class="p-3 font-medium text-slate-400">${idx + 1}</td>
                     <td class="p-3 font-semibold text-slate-800">${item.terminal}</td>
-                    <td class="p-3">${item.area}</td>
+                    <td class="p-3">${item.kategori4}</td>
                     <td class="p-3 font-bold text-slate-700">${item.jenis}</td>
                     <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
                     <td class="p-3">${item.brand || '-'}</td>
@@ -884,7 +1035,7 @@
             const payload = {
                 terminal: document.getElementById('inTerminal').value,
                 area: document.getElementById('inArea').value,
-                jenis: document.getElementById('inJenis').value.trim(),
+                jenis: document.getElementById('inJenis').value.trim().toUpperCase(),
                 nomor_alat: document.getElementById('inNomor').value.trim(),
                 brand: document.getElementById('inBrand').value.trim() || '-',
                 tahun_pembuatan: parseInt(document.getElementById('inTahun').value) || null,
@@ -920,8 +1071,9 @@
         }
 
         function exportCSV() {
-            const headers = ['Terminal', 'Area', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status'];
-            const rows = allData.map(d => [d.terminal, d.area, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.sumber_energi || '', d.status]);
+            const baseData = getActiveDataset();
+            const headers = ['Terminal', 'Kategori', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status'];
+            const rows = baseData.map(d => [d.terminal, d.kategori4, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan || '', d.sumber_energi || '', d.status]);
             const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
