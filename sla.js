@@ -22,7 +22,7 @@ const SLA_KAT_COLOR = { 'Alat Utama Dermaga': '#1e3a8a', 'Alat Utama Lapangan': 
 let slaBands = SLA_DEFAULT_BANDS.slice();
 let slaUnits = [];
 let slaAv = new Map();            // `${unit_id}|${tahun}|${bulan}` → baris availability_bulanan
-let slaState = { tahun: null, bulan: null, mode: 'bulan', ready: false, error: null };
+let slaState = { tahun: null, bulan: null, mode: 'bulan', view: 'both', ready: false, error: null };
 let slaChartInstance = null;
 
 const slaKey = (u, y, m) => `${u}|${y}|${m}`;
@@ -342,52 +342,88 @@ function slaKategoriCard(units, y, months) {
         </table></div>`;
 }
 
+// ---------- Sel grid (dipakai peta area & detail unit) ----------
+// Tampilan: 'av' = availability, 'ut' = utilisasi, 'both' = keduanya (dua baris rapi, tinggi sama).
+function slaUtFill(ut) {
+    if (ut === null || ut === undefined) return 'background:#f1f5f9;color:#94a3b8';
+    const steps = [[0.8, '#14b8a6', '#fff'], [0.6, '#5eead4', '#134e4a'], [0.4, '#99f6e4', '#134e4a'], [0.2, '#ccfbf1', '#134e4a'], [0, '#f0fdfa', '#134e4a']];
+    const [, bg, fg] = steps.find(([b]) => ut >= b - 1e-12);
+    return `background:${bg};color:${fg}`;
+}
+function slaGridCell({ av, faktor = 1, ut, tip, click }) {
+    const view = slaState.view;
+    const act = click ? `onclick="${click}" role="button" tabindex="0"` : '';
+    const base = `sla-cell num${click ? ' sla-cell-edit' : ''}`;
+    if (view === 'ut') {
+        return `<td class="${base}" style="${slaUtFill(ut)}" title="${slaEsc(tip)}" ${act}><span class="sla-v">${ut === null || ut === undefined ? '' : slaPct(ut, 0)}</span></td>`;
+    }
+    const top = av === null || av === undefined ? '' : `<span class="sla-v">${slaPct(av, 0)}</span>`;
+    if (view === 'av') return `<td class="${base}" style="${slaTone(av, faktor)}" title="${slaEsc(tip)}" ${act}>${top}</td>`;
+    const has = (av !== null && av !== undefined) || (ut !== null && ut !== undefined);
+    const w = ut === null || ut === undefined ? 0 : Math.max(2, Math.min(100, ut * 100));
+    const sub = ut === null || ut === undefined ? '' : `<span class="sla-u">U ${slaPct(ut, 0)}</span><span class="sla-bar"><i style="width:${w}%"></i></span>`;
+    return `<td class="${base} sla-both" style="${slaTone(av, faktor)}" title="${slaEsc(tip)}" ${act}>${top || (has ? '<span class="sla-v opacity-40">–</span>' : '')}${sub}</td>`;
+}
+function slaViewToggle() {
+    const b = (v, t) => `<button onclick="slaSetView('${v}')" class="px-2.5 py-1 cursor-pointer ${slaState.view === v ? 'tab-active' : 'tab-inactive'}">${t}</button>`;
+    return `<div class="inline-flex rounded-lg border border-slate-200 overflow-hidden text-[11px] font-semibold">${b('av', 'Availability')}${b('ut', 'Utilisasi')}${b('both', 'Keduanya')}</div>`;
+}
+function slaSetView(v) { slaState.view = v; slaRender(); }
+
 function slaHeatmapAreas(y) {
     const cells = TERMINALS.map(t => {
         const us = slaUnitsInScope(t);
         const tds = SLA_BULAN.map((_, i) => {
             const s = slaSummarize(us, y, [i + 1]);
-            const sel = '';
-            return `<td class="px-1 py-1 text-center num leading-tight" style="${slaTone(s.avgAv, 1)};${sel}" title="${slaEsc(t)} · ${SLA_BULAN_PANJANG[i]}: availability ${slaPct(s.avgAv, 2)} · utilisasi ${slaPct(s.avgUt, 2)} · dibayar ${slaRp(s.biaya)}">${s.avgAv === null ? '' : `<div class="font-semibold">${slaPct(s.avgAv, 0)}</div>`}${s.avgUt === null ? '' : `<div class="text-[9.5px] font-bold" style="${slaUtTone(s.avgUt)}">U ${slaPct(s.avgUt, 0)}</div>`}</td>`;
+            return slaGridCell({ av: s.avgAv, ut: s.avgUt, tip: `${t} · ${SLA_BULAN_PANJANG[i]}: availability ${slaPct(s.avgAv, 2)} · utilisasi ${slaPct(s.avgUt, 2)} · dibayar ${slaRp(s.biaya)}` });
         }).join('');
-        return `<tr class="cursor-pointer" onclick="selectBranch('${t}')"><td class="px-2 py-1.5 font-semibold text-slate-800 whitespace-nowrap">${slaEsc(t)}</td>${tds}</tr>`;
+        return `<tr class="cursor-pointer sla-row" onclick="selectBranch('${t}')" title="Lihat detail unit ${slaEsc(t)}"><td class="px-2 text-xs font-semibold text-slate-800 whitespace-nowrap">${slaEsc(t)}</td>${tds}</tr>`;
     }).join('');
     return `
-        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <p class="eyebrow">Peta availability (atas) &amp; utilisasi (U, bawah) per area per bulan · ${y}</p>
-            ${slaLegend()}
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p class="eyebrow">Peta ${slaViewLabel()} per area per bulan · ${y}</p>
+            <div class="flex flex-wrap items-center gap-3">${slaLegend()}${slaViewToggle()}</div>
         </div>
-        <table class="w-full text-[11px] border-separate" style="border-spacing:3px">
-            <thead><tr><th></th>${SLA_BULAN.map((b, i) => `<th class="font-semibold rounded ${slaMonthsOfPeriod().includes(i + 1) ? 'bg-slate-900 text-amber-300' : 'text-slate-500'}">${b}</th>`).join('')}</tr></thead>
+        <table class="w-full sla-grid">
+            <thead><tr><th class="w-32"></th>${slaMonthHeads(slaMonthsOfPeriod())}</tr></thead>
             <tbody>${cells}</tbody>
         </table>`;
 }
+function slaViewLabel() { return { av: 'availability', ut: 'utilisasi', both: 'availability &amp; utilisasi' }[slaState.view]; }
+function slaMonthHeads(months) {
+    return SLA_BULAN.map((b, i) => `<th><span class="sla-mh ${months.includes(i + 1) ? 'sla-mh-on' : ''}">${b}</span></th>`).join('');
+}
 
 function slaLegend() {
-    const item = (st, t) => `<span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="${st}"></span>${t}</span>`;
+    const item = (st, t) => `<span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded inline-block ring-1 ring-black/5" style="${st}"></span>${t}</span>`;
+    if (slaState.view === 'ut') {
+        return `<div class="flex items-center gap-2 text-[10.5px] text-slate-500">Utilisasi
+            <span class="inline-flex rounded overflow-hidden ring-1 ring-black/5">${[0.1, 0.3, 0.5, 0.7, 0.9].map(v => `<span class="w-5 h-3" style="${slaUtFill(v)}"></span>`).join('')}</span>
+            <span class="num">0% → 100%</span>${item(slaUtFill(null), 'Belum diisi')}</div>`;
+    }
     return `<div class="flex flex-wrap gap-3 text-[10.5px] text-slate-500">
-        ${item(slaTone(0.9, 1), '≥ 85%')}${item(slaTone(0.7, 1), '64–85%')}${item(slaTone(0.5, 1), '35–64%')}${item(slaTone(0.1, 1), '< 35%')}${item(slaTone(0, 0), 'Tidak dibayar')}${item(slaTone(null), 'Belum diisi')}</div>`;
+        ${item(slaTone(0.9, 1), '≥ 85%')}${item(slaTone(0.7, 1), '64–85%')}${item(slaTone(0.5, 1), '35–64%')}${item(slaTone(0.1, 1), '< 35%')}${item(slaTone(0, 0), 'Tidak dibayar')}${item(slaTone(null), 'Belum diisi')}
+        ${slaState.view === 'both' ? '<span class="inline-flex items-center gap-1.5"><span class="sla-bar inline-block w-6 !static"><i style="width:60%"></i></span>Utilisasi</span>' : ''}</div>`;
 }
 
 function slaUnitTable(units, y, months) {
+    const edit = slaCanEdit();
     const rows = units.map((u, idx) => {
         let biaya = 0, penuh = 0;
         const tds = SLA_BULAN.map((_, i) => {
-            const c = slaCell(u, y, i + 1);
+            const c = slaCell(u, y, i + 1), ut = slaUtOf(u.id, y, i + 1);
             if (c && months.includes(i + 1)) { biaya += c.biaya; penuh += c.penuh; }
-            const sel = '';
-            const ut = slaUtOf(u.id, y, i + 1);
-            const tip = (c ? `${SLA_BULAN_PANJANG[i]}: availability ${slaPct(c.av, 2)} · faktor ${slaPct(c.faktor, 0)} · dibayar ${slaRp(c.biaya)}${c.av === 0 ? ` · 0% ke-${c.nolBeruntun} beruntun` : ''}` : `${SLA_BULAN_PANJANG[i]}: availability belum diisi`) + ` · utilisasi ${slaPct(ut, 2)}`;
-            return `<td class="px-1 py-0.5 text-center num leading-tight" style="${slaTone(c ? c.av : null, c ? c.faktor : 1)};${sel}" title="${slaEsc(tip)}">${c ? `<div>${slaPct(c.av, 0)}</div>` : ''}${ut === null ? '' : `<div class="text-[9.5px] font-bold" style="${c && c.faktor === 0 ? 'color:#fecaca' : slaUtTone(ut)}">U ${slaPct(ut, 0)}</div>`}</td>`;
+            const tip = (c ? `${SLA_BULAN_PANJANG[i]}: availability ${slaPct(c.av, 2)} · faktor bayar ${slaPct(c.faktor, 0)} · dibayar ${slaRp(c.biaya)}${c.av === 0 ? ` · 0% ke-${c.nolBeruntun} beruntun` : ''}` : `${SLA_BULAN_PANJANG[i]}: availability belum diisi`) + ` · utilisasi ${slaPct(ut, 2)}${edit ? ' · klik untuk edit' : ''}`;
+            return slaGridCell({ av: c ? c.av : null, faktor: c ? c.faktor : 1, ut, tip, click: edit ? `slaOpenCellEdit(${u.id},${y},${i + 1})` : '' });
         }).join('');
         const link = u.nomor_alat ? `<span class="font-mono text-[10px] text-slate-500">${slaEsc(u.nomor_alat)}</span>` : '';
         const cek = u.perlu_cek || !u.peralatan_id ? ' <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 rounded" title="Belum tertaut ke database alat">cek</span>' : '';
-        return `<tr>
-            <td class="px-1.5 py-1 text-slate-400 num">${idx + 1}</td>
-            <td class="px-1.5 py-1"><div class="font-semibold text-slate-800 leading-tight max-w-[220px] truncate" title="${slaEsc(u.nama_unit)}">${slaEsc(u.nama_unit)}</div>${link}${cek}</td>
+        return `<tr class="sla-row">
+            <td class="px-1.5 text-slate-400 num text-[11px]">${idx + 1}</td>
+            <td class="px-1.5"><div class="font-semibold text-slate-800 text-[11.5px] leading-tight max-w-[230px] truncate" title="${slaEsc(u.nama_unit)}">${slaEsc(u.nama_unit)}</div>${link}${cek}</td>
             ${tds}
-            <td class="px-1.5 py-1 text-right num whitespace-nowrap">${penuh ? slaRp(biaya) : '–'}</td>
-            <td class="px-1.5 py-1 text-right num whitespace-nowrap ${penuh - biaya > 0 ? 'text-rose-700' : 'text-slate-400'}">${penuh ? slaRp(penuh - biaya) : '–'}</td>
+            <td class="px-2 text-right num whitespace-nowrap text-[11.5px]">${penuh ? slaRp(biaya) : '–'}</td>
+            <td class="px-2 text-right num whitespace-nowrap text-[11.5px] ${penuh - biaya > 0 ? 'text-rose-700' : 'text-slate-400'}">${penuh ? slaRp(penuh - biaya) : '–'}</td>
         </tr>`;
     }).join('');
     return `
@@ -395,15 +431,145 @@ function slaUnitTable(units, y, months) {
             <p class="eyebrow">Detail per unit · ${slaEsc(slaBranch())} · ${y}</p>
             <button onclick="selectBranch('Semua')" class="text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i>Semua area</button>
         </div>
-        <div class="mb-2 flex flex-wrap items-center gap-3">${slaLegend()}<span class="text-[10.5px] text-slate-500">· angka kecil <b>U</b> = utilisasi</span></div>
-        <div class="overflow-auto max-h-[520px]">
-        <table class="w-full text-[11px] border-separate" style="border-spacing:2px">
-            <thead class="sticky top-0 bg-white z-10 text-slate-500"><tr><th>No</th><th class="text-left">Unit kontrak</th>${SLA_BULAN.map((b, i) => `<th class="font-semibold rounded ${months.includes(i + 1) ? 'bg-slate-900 text-amber-300' : ''}">${b}</th>`).join('')}
-                <th class="text-right">Dibayar*</th><th class="text-right">Potongan*</th></tr></thead>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-3">${slaLegend()}${slaViewToggle()}</div>
+        <div class="overflow-auto max-h-[560px]">
+        <table class="w-full sla-grid">
+            <thead class="sticky top-0 bg-white z-10"><tr><th class="w-6 text-left text-[10.5px] text-slate-400 font-semibold">No</th><th class="text-left text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider">Unit kontrak</th>${slaMonthHeads(months)}
+                <th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Dibayar*</th><th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Potongan*</th></tr></thead>
             <tbody>${rows}</tbody>
         </table></div>
-        <p class="text-[10.5px] text-slate-400 mt-2">* untuk periode terpilih (bulan dengan judul gelap). Arahkan kursor ke kotak bulan untuk faktor bayar.</p>`;
+        <p class="text-[10.5px] text-slate-400 mt-2">* untuk periode terpilih (bulan bertanda gelap).${edit ? ' Klik kotak bulan untuk mengedit availability &amp; utilisasi unit tersebut.' : ' Arahkan kursor ke kotak bulan untuk faktor bayar.'}</p>`;
 }
+
+// ---------- Edit cepat satu unit-bulan (klik kotak) ----------
+function slaEnsureCellModal() {
+    if (document.getElementById('slaCellModal')) return;
+    const st = document.createElement('style');
+    st.textContent = '';
+    const div = document.createElement('div');
+    div.id = 'slaCellModal';
+    div.className = 'fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 hidden items-center justify-center p-3';
+    div.onclick = e => { if (e.target === div) slaCloseCellEdit(); };
+    div.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-5 py-4 bg-slate-900 text-white flex items-start justify-between gap-3">
+                <div><p class="text-[10.5px] font-bold tracking-wider uppercase text-amber-300" id="slaCeWhen"></p>
+                    <h3 class="font-extrabold leading-tight mt-0.5" id="slaCeName"></h3>
+                    <p class="text-[11px] text-slate-400 font-mono" id="slaCeNo"></p></div>
+                <button onclick="slaCloseCellEdit()" class="text-slate-400 hover:text-white cursor-pointer text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="field-label" for="slaCeAv">Availability (%)</label>
+                        <input id="slaCeAv" inputmode="decimal" class="field num text-right !text-lg !font-bold" placeholder="contoh 95,15" oninput="slaCePreview()"></div>
+                    <div><label class="field-label" for="slaCeUt">Utilisasi (%)</label>
+                        <input id="slaCeUt" inputmode="decimal" class="field num text-right !text-lg !font-bold" placeholder="opsional" oninput="slaCePreview()"></div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 grid grid-cols-3 gap-2 text-center">
+                    <div><p class="eyebrow !text-[9.5px]">Faktor bayar</p><p id="slaCeF" class="font-extrabold text-slate-900 num mt-0.5">–</p></div>
+                    <div><p class="eyebrow !text-[9.5px]">Dibayar</p><p id="slaCeB" class="font-extrabold text-slate-900 num mt-0.5">–</p></div>
+                    <div><p class="eyebrow !text-[9.5px]">Potongan</p><p id="slaCeP" class="font-extrabold text-rose-700 num mt-0.5">–</p></div>
+                </div>
+                <p id="slaCeNote" class="text-[11px] text-slate-500"></p>
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex items-center gap-2">
+                <button id="slaCeDel" onclick="slaCellDelete()" class="px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"><i class="fa-solid fa-trash-can mr-1"></i>Hapus data bulan ini</button>
+                <div class="ml-auto flex gap-2">
+                    <button onclick="slaCloseCellEdit()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
+                    <button id="slaCeSave" onclick="slaCellSave()" class="px-5 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 rounded-lg cursor-pointer"><i class="fa-solid fa-floppy-disk mr-1"></i>Simpan</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(div);
+    div.addEventListener('keydown', e => { if (e.key === 'Enter') slaCellSave(); if (e.key === 'Escape') slaCloseCellEdit(); });
+}
+let slaCe = null;
+function slaOpenCellEdit(unitId, y, m) {
+    if (!slaCanEdit()) return;
+    slaEnsureCellModal();
+    const u = slaUnits.find(x => x.id === unitId), r = slaAv.get(slaKey(unitId, y, m));
+    slaCe = { u, y, m, row: r };
+    document.getElementById('slaCeWhen').textContent = `${SLA_BULAN_PANJANG[m - 1]} ${y} · ${u.terminal}`;
+    document.getElementById('slaCeName').textContent = u.nama_unit;
+    document.getElementById('slaCeNo').textContent = (u.nomor_alat || '') + ' · harga ' + slaRp(u.harga_bulanan) + '/bulan';
+    document.getElementById('slaCeAv').value = slaFmtIn(r ? r.availability : null);
+    document.getElementById('slaCeUt').value = slaFmtIn(r ? r.utilisasi : null);
+    document.getElementById('slaCeDel').style.visibility = r ? 'visible' : 'hidden';
+    const md = document.getElementById('slaCellModal');
+    md.classList.remove('hidden'); md.style.display = 'flex';
+    slaCePreview();
+    setTimeout(() => { const i = document.getElementById('slaCeAv'); i.focus(); i.select(); }, 30);
+}
+function slaCloseCellEdit() {
+    const md = document.getElementById('slaCellModal');
+    if (md) { md.classList.add('hidden'); md.style.display = 'none'; }
+}
+function slaCePreview() {
+    const { u, y, m } = slaCe;
+    const av = slaParseIn(document.getElementById('slaCeAv').value), ut = slaParseIn(document.getElementById('slaCeUt').value);
+    const set = (id, t) => document.getElementById(id).textContent = t;
+    const note = document.getElementById('slaCeNote');
+    note.className = 'text-[11px] text-slate-500';
+    if (av.error || ut.error) { set('slaCeF', '–'); set('slaCeB', '–'); set('slaCeP', '–'); note.textContent = 'Isi angka 0–100.'; note.className = 'text-[11px] text-rose-600 font-semibold'; return; }
+    if (av.empty) { set('slaCeF', '–'); set('slaCeB', 'Rp 0'); set('slaCeP', '–'); note.textContent = 'Availability kosong = belum ada data, bulan ini tidak ditagihkan.'; return; }
+    let f = slaBandFactor(av.value), streak = 0;
+    if (av.value === 0) {
+        streak = 1; let [py, pm] = slaPrev(y, m);
+        while (streak < SLA_ZERO_LIMIT && slaAvOf(u.id, py, pm) === 0) { streak++; [py, pm] = slaPrev(py, pm); }
+        if (streak >= SLA_ZERO_LIMIT) f = 0;
+    }
+    set('slaCeF', slaPct(f, 0)); set('slaCeB', slaRpShort(u.harga_bulanan * f)); set('slaCeP', slaRpShort(u.harga_bulanan * (1 - f)));
+    note.textContent = av.value === 0 ? (f === 0 ? `0% bulan ke-${streak} berturut-turut → tidak dibayar.` : `0% bulan ke-${streak} berturut-turut → masih dibayar ${slaPct(f, 0)}.`) : '';
+}
+async function slaCellPersist(fn) {
+    const btn = document.getElementById('slaCeSave'), orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Menyimpan…';
+    try { await fn(); slaCloseCellEdit(); await slaLoad(); }
+    catch (e) { alert('Gagal menyimpan: ' + (e.message || e)); }
+    finally { btn.disabled = false; btn.innerHTML = orig; }
+}
+function slaCellSave() {
+    const { u, y, m, row } = slaCe;
+    const av = slaParseIn(document.getElementById('slaCeAv').value), ut = slaParseIn(document.getElementById('slaCeUt').value);
+    if (av.error || ut.error) { slaCePreview(); return; }
+    if (av.empty && ut.empty) { if (row) slaCellDelete(); else slaCloseCellEdit(); return; }
+    slaCellPersist(async () => {
+        const { error } = await supabaseClient.from('availability_bulanan').upsert([{ unit_id: u.id, tahun: y, bulan: m, availability: av.empty ? null : av.value, utilisasi: ut.empty ? null : ut.value }], { onConflict: 'unit_id,tahun,bulan' });
+        if (error) throw error;
+    });
+}
+function slaCellDelete() {
+    const { u, y, m, row } = slaCe;
+    if (!row) { slaCloseCellEdit(); return; }
+    if (!confirm(`Hapus availability & utilisasi ${u.nama_unit} bulan ${SLA_BULAN_PANJANG[m - 1]} ${y}?`)) return;
+    slaCellPersist(async () => {
+        const { error } = await supabaseClient.from('availability_bulanan').delete().in('id', [row.id]);
+        if (error) throw error;
+    });
+}
+
+// Gaya grid (disuntikkan sekali, tidak perlu mengubah index.html)
+(function slaInjectStyle() {
+    const css = `
+    .sla-grid { border-collapse: separate; border-spacing: 3px; }
+    .sla-grid thead th { font-weight: 600; padding: 0 0 4px; }
+    .sla-mh { display: inline-block; min-width: 38px; padding: 3px 6px; border-radius: 6px; font-size: 10.5px; font-weight: 700; color: #64748b; letter-spacing: .02em; }
+    .sla-mh-on { background: #0f172a; color: #fbbf24; }
+    .sla-cell { height: 34px; min-width: 44px; padding: 0 4px; text-align: center; vertical-align: middle; border-radius: 7px; font-size: 11.5px; transition: box-shadow .12s, transform .12s; }
+    .sla-cell .sla-v { font-weight: 700; letter-spacing: -.01em; }
+    .sla-cell.sla-both { height: 44px; position: relative; padding-bottom: 6px; }
+    .sla-cell.sla-both .sla-v { display: block; line-height: 1.05; }
+    .sla-cell .sla-u { display: block; font-size: 9.5px; font-weight: 600; opacity: .72; line-height: 1.2; margin-top: 1px; }
+    .sla-bar { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 3px; border-radius: 3px; background: rgba(15,23,42,.10); overflow: hidden; }
+    .sla-bar.\\!static { position: relative; left: auto; right: auto; bottom: auto; height: 4px; }
+    .sla-bar i { display: block; height: 100%; background: #0d9488; border-radius: 3px; }
+    .sla-cell-edit { cursor: pointer; }
+    .sla-cell-edit:hover { box-shadow: 0 0 0 2px #2563eb inset; transform: translateY(-1px); }
+    .sla-row > td:first-child, .sla-row > td:nth-child(2) { padding-top: 2px; padding-bottom: 2px; }
+    tr.sla-row:hover > td.sla-cell { filter: saturate(1.15); }
+    `;
+    const el = document.createElement('style'); el.textContent = css; document.head.appendChild(el);
+})();
 
 function slaDrawChart(units, y) {
     const cv = document.getElementById('slaChart');
