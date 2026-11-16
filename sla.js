@@ -13,6 +13,11 @@ const SLA_BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep'
 const SLA_BULAN_PANJANG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const SLA_DEFAULT_BANDS = [{ batas: 0, faktor: 0.5 }, { batas: 0.35, faktor: 0.65 }, { batas: 0.64, faktor: 0.85 }, { batas: 0.85, faktor: 1 }];
 const SLA_ZERO_LIMIT = 3; // bulan ke-3 berturut-turut 0% → tidak dibayar
+// Utilisasi = jam alat dipakai ÷ jam alat tersedia. Hanya ditampilkan sebagai persen,
+// tidak memakai target/SLA dan tidak memengaruhi biaya kontrak.
+const SLA_KATEGORI = ['Alat Utama Dermaga', 'Alat Utama Lapangan', 'Alat Pendukung', 'Alat Angkut'];
+const SLA_KAT_SHORT = { 'Alat Utama Dermaga': 'Dermaga', 'Alat Utama Lapangan': 'Lapangan', 'Alat Pendukung': 'Pendukung', 'Alat Angkut': 'Angkut' };
+const SLA_KAT_COLOR = { 'Alat Utama Dermaga': '#1e3a8a', 'Alat Utama Lapangan': '#3b82f6', 'Alat Pendukung': '#94a3b8', 'Alat Angkut': '#0f766e' };
 
 let slaBands = SLA_DEFAULT_BANDS.slice();
 let slaUnits = [];
@@ -104,6 +109,25 @@ function slaAvOf(unitId, y, m) {
     const r = slaAv.get(slaKey(unitId, y, m));
     return r && r.availability !== null && r.availability !== undefined ? r.availability : null;
 }
+function slaUtOf(unitId, y, m) {
+    const r = slaAv.get(slaKey(unitId, y, m));
+    return r && r.utilisasi !== null && r.utilisasi !== undefined ? r.utilisasi : null;
+}
+// Kategori unit kontrak: ikut data alat SIMALAT bila tertaut, selain itu dari kode jenis.
+function slaKategori(u) {
+    if (u.peralatan_id && typeof rawData !== 'undefined') {
+        const a = rawData.find(d => d.id === u.peralatan_id);
+        if (a && a.kategori4) return a.kategori4;
+    }
+    const j = String(u.jenis || '').toUpperCase();
+    if (['QCC', 'GLC', 'GJC', 'FJC'].includes(j)) return 'Alat Utama Dermaga';
+    if (['RTG', 'RMGC'].includes(j)) return 'Alat Utama Lapangan';
+    if (['HDT', 'TTR'].includes(j)) return 'Alat Angkut';
+    return 'Alat Pendukung';
+}
+function slaUtTone(ut) {
+    return ut === null || ut === undefined ? 'color:#94a3b8' : 'color:#0f766e';
+}
 function slaPrev(y, m) { return m === 1 ? [y - 1, 12] : [y, m - 1]; }
 
 // Hasil satu unit pada satu bulan, atau null bila belum ada data.
@@ -131,10 +155,12 @@ function slaUnitsInScope(branch = slaBranch()) {
 
 // Ringkasan sekumpulan unit pada sekumpulan bulan.
 function slaSummarize(units, y, months) {
-    const s = { unit: units.length, unitData: 0, nCell: 0, sumAv: 0, biaya: 0, penuh: 0, potongan: 0, bawahTarget: 0, tidakDibayar: 0, nolSeri: 0 };
+    const s = { unit: units.length, unitData: 0, nCell: 0, sumAv: 0, nUt: 0, sumUt: 0, unitUt: 0, biaya: 0, penuh: 0, potongan: 0, bawahTarget: 0, tidakDibayar: 0, nolSeri: 0 };
     units.forEach(u => {
-        let has = false, uSum = 0, uN = 0;
+        let has = false, uSum = 0, uN = 0, tSum = 0, tN = 0;
         months.forEach(m => {
+            const ut = slaUtOf(u.id, y, m);
+            if (ut !== null) { s.nUt++; s.sumUt += ut; tSum += ut; tN++; }
             const c = slaCell(u, y, m);
             if (!c) return;
             has = true; uSum += c.av; uN++;
@@ -143,8 +169,10 @@ function slaSummarize(units, y, months) {
             if (c.av === 0 && c.nolBeruntun >= 2 && c.faktor > 0) s.nolSeri++;
         });
         if (has) { s.unitData++; if (uSum / uN < 0.85 - 1e-12) s.bawahTarget++; }
+        if (tN) s.unitUt++;
     });
     s.avgAv = s.nCell ? s.sumAv / s.nCell : null;
+    s.avgUt = s.nUt ? s.sumUt / s.nUt : null;
     s.pctPotongan = s.penuh ? s.potongan / s.penuh : null;
     return s;
 }
@@ -220,8 +248,9 @@ function slaRender() {
         </div>`;
     const avTone = S.avgAv === null ? 'text-slate-400' : S.avgAv >= 0.85 ? 'text-emerald-700' : S.avgAv >= 0.64 ? 'text-amber-600' : 'text-rose-700';
     const kpis = `
-        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
             ${kpi('Rata-rata availability', slaPct(S.avgAv), `${periodText} · target ≥ 85%`, avTone, '<i class="fa-solid fa-gauge-high text-slate-400"></i>')}
+            ${kpi('Rata-rata utilisasi', slaPct(S.avgUt), S.nUt ? `${periodText} · ${S.unitUt} unit berdata` : 'belum diisi — isi lewat Input Availability', S.avgUt === null ? 'text-slate-400' : '', '<i class="fa-solid fa-gears text-slate-400"></i>').replace('num mt-2 ">', `num mt-2" style="${slaUtTone(S.avgUt)}">`)}
             ${kpi('Unit di bawah 85%', `${S.bawahTarget}<span class="text-sm font-semibold text-slate-400"> / ${S.unitData}</span>`, `unit berdata · ${S.unit} unit kontrak`, S.bawahTarget ? 'text-amber-600' : 'text-slate-900', '<i class="fa-solid fa-arrow-trend-down text-slate-400"></i>')}
             ${kpi('Biaya dibayar', slaRpShort(S.biaya), `dari nilai penuh ${slaRpShort(S.penuh)}`, 'text-slate-900', '<i class="fa-solid fa-money-bill-wave text-slate-400"></i>')}
             ${kpi('Potongan SLA', slaRpShort(S.potongan), `${slaPct(S.pctPotongan, 2)} dari nilai penuh`, S.potongan ? 'text-rose-700' : 'text-slate-900', '<i class="fa-solid fa-scissors text-slate-400"></i>')}
@@ -236,6 +265,7 @@ function slaRender() {
                 <div style="height:${branch === 'Semua' ? 300 : 240}px"><canvas id="slaChart"></canvas></div>
             </div>
         </div>
+        <div class="card p-4 mb-3">${slaKategoriCard(units, y, months)}</div>
         ${branch === 'Semua' ? `<div class="card p-4 overflow-x-auto mb-3">${slaHeatmapAreas(y)}</div>` : ''}
         <details class="card px-4 py-3 text-xs text-slate-600">
             <summary class="font-bold text-slate-800 cursor-pointer">Aturan perhitungan SLA (sesuai kontrak)</summary>
@@ -245,6 +275,7 @@ function slaRender() {
                 <li><b>Availability 0%</b> tiga bulan berturut-turut: bulan ke-1 dan ke-2 tetap dibayar 50%, bulan ke-3 dan seterusnya <b>tidak dibayar</b> (faktor 0) sampai availability kembali di atas 0%.</li>
                 <li>Bulan yang belum diisi tidak ditagihkan dan tidak dihitung dalam rata-rata maupun nilai penuh.</li>
                 <li>Rata-rata availability = rata-rata sederhana seluruh unit-bulan yang berdata pada periode terpilih.</li>
+                <li><b>Utilisasi</b> = jam alat dipakai ÷ jam alat tersedia, ditampilkan sebagai persen saja (tanpa target SLA) dan tidak memengaruhi biaya kontrak. Rata-rata utilisasi = rata-rata sederhana unit-bulan yang sudah diisi.</li>
             </ul>
         </details>`;
 
@@ -259,21 +290,56 @@ function slaAreaTable(y, months) {
             <td class="px-2 py-2 ${bold ? '' : 'font-semibold text-slate-800'}">${slaEsc(name)}</td>
             <td class="px-2 py-2 text-center num">${s.unitData}/${s.unit}</td>
             <td class="px-2 py-2 text-center num"><span class="px-1.5 py-0.5 rounded" style="${slaTone(s.avgAv, 1)}">${slaPct(s.avgAv)}</span></td>
+            <td class="px-2 py-2 text-center num font-semibold" style="${slaUtTone(s.avgUt)}">${slaPct(s.avgUt)}</td>
             <td class="px-2 py-2 text-center num">${s.bawahTarget}</td>
-            <td class="px-2 py-2 text-right num whitespace-nowrap">${slaRp(s.penuh)}</td>
             <td class="px-2 py-2 text-right num whitespace-nowrap">${slaRp(s.biaya)}</td>
             <td class="px-2 py-2 text-right num whitespace-nowrap ${s.potongan ? 'text-rose-700' : ''}">${slaRp(s.potongan)}</td>
             <td class="px-2 py-2 text-right num">${slaPct(s.pctPotongan, 2)}</td>
         </tr>`;
     return `
-        <p class="eyebrow mb-2">Rekap per area · klik baris untuk detail unit</p>
+        <p class="eyebrow mb-2">Rekap per area · klik baris untuk detail unit · nilai penuh ada di Excel SLA</p>
         <table class="w-full text-xs border-collapse">
             <thead class="text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
-                <tr><th class="px-2 py-2 text-left">Area</th><th class="px-2 py-2">Unit berdata</th><th class="px-2 py-2">Avail.</th><th class="px-2 py-2">&lt; 85%</th>
-                    <th class="px-2 py-2 text-right">Nilai penuh</th><th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Potongan</th><th class="px-2 py-2 text-right">%</th></tr>
+                <tr><th class="px-2 py-2 text-left">Area</th><th class="px-2 py-2">Unit berdata</th><th class="px-2 py-2">Avail.</th><th class="px-2 py-2">Util.</th><th class="px-2 py-2">&lt; 85%</th>
+                    <th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Potongan</th><th class="px-2 py-2 text-right">%</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">${rows.map(r => tr(r.t, r.s, true)).join('')}${tr('Total', tot, false, true)}</tbody>
         </table>`;
+}
+
+function slaKategoriCard(units, y, months) {
+    const rows = SLA_KATEGORI.map(k => ({ k, s: slaSummarize(units.filter(u => slaKategori(u) === k), y, months) })).filter(r => r.s.unit);
+    const tot = slaSummarize(units, y, months);
+    const bar = (v, color, label) => `
+        <div class="flex items-center gap-2">
+            <span class="w-16 text-[10px] text-slate-500">${label}</span>
+            <div class="flex-1 h-2.5 rounded-full bg-slate-100 overflow-hidden relative">
+                <div class="h-full rounded-full" style="width:${v === null ? 0 : Math.min(100, v * 100)}%;background:${color}"></div>
+                ${label === 'Availability' ? '<div class="absolute top-0 bottom-0 w-px bg-slate-900/40" style="left:85%"></div>' : ''}
+            </div>
+            <span class="w-12 text-right text-[11px] font-bold num" style="${label === 'Availability' ? '' : slaUtTone(v)}">${slaPct(v)}</span>
+        </div>`;
+    const tr = (name, s, color, isTot) => `
+        <tr class="${isTot ? 'bg-slate-50 font-bold' : ''}">
+            <td class="px-2 py-2.5 whitespace-nowrap"><span class="inline-block w-2.5 h-2.5 rounded-full mr-1.5 align-middle" style="background:${color}"></span><span class="font-semibold text-slate-800">${name}</span>
+                <div class="text-[10.5px] text-slate-500 font-normal num pl-4">${s.unit} unit kontrak</div></td>
+            <td class="px-2 py-2.5 min-w-[260px] space-y-1">${bar(s.avgAv, '#1e3a8a', 'Availability')}${bar(s.avgUt, '#0d9488', 'Utilisasi')}</td>
+            <td class="px-2 py-2.5 text-[11px] num">${s.avgAv !== null && s.avgUt !== null ? `<span class="font-bold">${((s.avgAv - s.avgUt) * 100).toLocaleString('id-ID', { maximumFractionDigits: 1 })} poin</span><div class="text-[10px] text-slate-500">kapasitas siap belum terpakai</div>` : '–'}</td>
+            <td class="px-2 py-2.5 text-right num whitespace-nowrap">${slaRp(s.biaya)}</td>
+            <td class="px-2 py-2.5 text-right num whitespace-nowrap ${s.potongan ? 'text-rose-700' : 'text-slate-400'}">${slaRp(s.potongan)}</td>
+        </tr>`;
+    return `
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <p class="eyebrow">Availability vs utilisasi per kategori alat · ${slaBranch() === 'Semua' ? 'seluruh terminal' : slaEsc(slaBranch())}</p>
+            <span class="text-[10.5px] text-slate-500">Garis tipis = target availability 85%</span>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-xs border-collapse">
+            <thead class="text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                <tr><th class="px-2 py-2 text-left">Kategori</th><th class="px-2 py-2 text-left">Rata-rata availability &amp; utilisasi</th><th class="px-2 py-2 text-left">Selisih</th>
+<th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Potongan</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">${rows.map(r => tr(r.k, r.s, SLA_KAT_COLOR[r.k], false)).join('')}${tr('Rata-rata semua kategori', tot, '#0f172a', true)}</tbody>
+        </table></div>`;
 }
 
 function slaHeatmapAreas(y) {
@@ -282,13 +348,13 @@ function slaHeatmapAreas(y) {
         const tds = SLA_BULAN.map((_, i) => {
             const s = slaSummarize(us, y, [i + 1]);
             const sel = '';
-            return `<td class="px-1 py-1.5 text-center num" style="${slaTone(s.avgAv, 1)};${sel}" title="${slaEsc(t)} · ${SLA_BULAN_PANJANG[i]}: ${slaPct(s.avgAv, 2)} · dibayar ${slaRp(s.biaya)}">${s.avgAv === null ? '' : slaPct(s.avgAv, 0)}</td>`;
+            return `<td class="px-1 py-1 text-center num leading-tight" style="${slaTone(s.avgAv, 1)};${sel}" title="${slaEsc(t)} · ${SLA_BULAN_PANJANG[i]}: availability ${slaPct(s.avgAv, 2)} · utilisasi ${slaPct(s.avgUt, 2)} · dibayar ${slaRp(s.biaya)}">${s.avgAv === null ? '' : `<div class="font-semibold">${slaPct(s.avgAv, 0)}</div>`}${s.avgUt === null ? '' : `<div class="text-[9.5px] font-bold" style="${slaUtTone(s.avgUt)}">U ${slaPct(s.avgUt, 0)}</div>`}</td>`;
         }).join('');
         return `<tr class="cursor-pointer" onclick="selectBranch('${t}')"><td class="px-2 py-1.5 font-semibold text-slate-800 whitespace-nowrap">${slaEsc(t)}</td>${tds}</tr>`;
     }).join('');
     return `
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <p class="eyebrow">Peta availability per area per bulan · ${y}</p>
+            <p class="eyebrow">Peta availability (atas) &amp; utilisasi (U, bawah) per area per bulan · ${y}</p>
             ${slaLegend()}
         </div>
         <table class="w-full text-[11px] border-separate" style="border-spacing:3px">
@@ -310,8 +376,9 @@ function slaUnitTable(units, y, months) {
             const c = slaCell(u, y, i + 1);
             if (c && months.includes(i + 1)) { biaya += c.biaya; penuh += c.penuh; }
             const sel = '';
-            const tip = c ? `${SLA_BULAN_PANJANG[i]}: availability ${slaPct(c.av, 2)} · faktor ${slaPct(c.faktor, 0)} · dibayar ${slaRp(c.biaya)}${c.av === 0 ? ` · 0% ke-${c.nolBeruntun} beruntun` : ''}` : `${SLA_BULAN_PANJANG[i]}: belum diisi`;
-            return `<td class="px-1 py-1 text-center num" style="${slaTone(c ? c.av : null, c ? c.faktor : 1)};${sel}" title="${slaEsc(tip)}">${c ? slaPct(c.av, 0) : ''}</td>`;
+            const ut = slaUtOf(u.id, y, i + 1);
+            const tip = (c ? `${SLA_BULAN_PANJANG[i]}: availability ${slaPct(c.av, 2)} · faktor ${slaPct(c.faktor, 0)} · dibayar ${slaRp(c.biaya)}${c.av === 0 ? ` · 0% ke-${c.nolBeruntun} beruntun` : ''}` : `${SLA_BULAN_PANJANG[i]}: availability belum diisi`) + ` · utilisasi ${slaPct(ut, 2)}`;
+            return `<td class="px-1 py-0.5 text-center num leading-tight" style="${slaTone(c ? c.av : null, c ? c.faktor : 1)};${sel}" title="${slaEsc(tip)}">${c ? `<div>${slaPct(c.av, 0)}</div>` : ''}${ut === null ? '' : `<div class="text-[9.5px] font-bold" style="${c && c.faktor === 0 ? 'color:#fecaca' : slaUtTone(ut)}">U ${slaPct(ut, 0)}</div>`}</td>`;
         }).join('');
         const link = u.nomor_alat ? `<span class="font-mono text-[10px] text-slate-500">${slaEsc(u.nomor_alat)}</span>` : '';
         const cek = u.perlu_cek || !u.peralatan_id ? ' <span class="text-[9px] font-bold text-amber-700 bg-amber-100 px-1 rounded" title="Belum tertaut ke database alat">cek</span>' : '';
@@ -328,7 +395,7 @@ function slaUnitTable(units, y, months) {
             <p class="eyebrow">Detail per unit · ${slaEsc(slaBranch())} · ${y}</p>
             <button onclick="selectBranch('Semua')" class="text-[11px] font-semibold text-blue-700 hover:underline cursor-pointer"><i class="fa-solid fa-arrow-left mr-1"></i>Semua area</button>
         </div>
-        <div class="mb-2">${slaLegend()}</div>
+        <div class="mb-2 flex flex-wrap items-center gap-3">${slaLegend()}<span class="text-[10.5px] text-slate-500">· angka kecil <b>U</b> = utilisasi</span></div>
         <div class="overflow-auto max-h-[520px]">
         <table class="w-full text-[11px] border-separate" style="border-spacing:2px">
             <thead class="sticky top-0 bg-white z-10 text-slate-500"><tr><th>No</th><th class="text-left">Unit kontrak</th>${SLA_BULAN.map((b, i) => `<th class="font-semibold rounded ${months.includes(i + 1) ? 'bg-slate-900 text-amber-300' : ''}">${b}</th>`).join('')}
@@ -351,14 +418,15 @@ function slaDrawChart(units, y) {
             datasets: [
                 { type: 'bar', label: 'Dibayar (Rp juta)', data: per.map(s => jt(s.biaya)), backgroundColor: '#1e3a8a', stack: 'b', yAxisID: 'y', borderRadius: 3 },
                 { type: 'bar', label: 'Potongan (Rp juta)', data: per.map(s => jt(s.potongan)), backgroundColor: '#e11d48', stack: 'b', yAxisID: 'y', borderRadius: 3 },
-                { type: 'line', label: 'Availability', data: per.map(s => s.avgAv === null ? null : Math.round(s.avgAv * 1000) / 10), borderColor: '#f59e0b', backgroundColor: '#f59e0b', yAxisID: 'y2', tension: .3, pointRadius: 3, spanGaps: false }
+                { type: 'line', label: 'Availability', data: per.map(s => s.avgAv === null ? null : Math.round(s.avgAv * 1000) / 10), borderColor: '#f59e0b', backgroundColor: '#f59e0b', yAxisID: 'y2', tension: .3, pointRadius: 3, spanGaps: false },
+                { type: 'line', label: 'Utilisasi', data: per.map(s => s.avgUt === null ? null : Math.round(s.avgUt * 1000) / 10), borderColor: '#0d9488', backgroundColor: '#0d9488', borderDash: [5, 4], yAxisID: 'y2', tension: .3, pointRadius: 3, spanGaps: false }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
-                tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'y2' ? `Availability: ${c.raw ?? '–'}%` : `${c.dataset.label.replace(' (Rp juta)', '')}: Rp ${(c.raw || 0).toLocaleString('id-ID')} jt` } }
+                tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'y2' ? `${c.dataset.label}: ${c.raw ?? '–'}%` : `${c.dataset.label.replace(' (Rp juta)', '')}: Rp ${(c.raw || 0).toLocaleString('id-ID')} jt` } }
             },
             scales: {
                 x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
@@ -590,9 +658,9 @@ function slaBuildSheet(wb, y, units) {
     const F = (formula, result) => ({ formula, result });
 
     // Kolom detail unit
-    const C = { no: 1, term: 2, grup: 3, nama: 4, nomor: 5, harga: 6, avPrev: 7 };   // G,H = Nov & Des tahun lalu
-    C.av1 = 9; C.f1 = C.av1 + 12; C.b1 = C.f1 + 12; C.penuh = C.b1 + 12; C.biaya = C.penuh + 1; C.pot = C.biaya + 1; C.rata = C.pot + 1;
-    const last = C.rata;
+    const C = { no: 1, term: 2, kat: 3, grup: 4, nama: 5, nomor: 6, harga: 7, avPrev: 8 };   // H,I = Nov & Des tahun lalu
+    C.av1 = 10; C.u1 = C.av1 + 12; C.f1 = C.u1 + 12; C.b1 = C.f1 + 12; C.penuh = C.b1 + 12; C.biaya = C.penuh + 1; C.pot = C.biaya + 1; C.rata = C.pot + 1; C.rataUt = C.rata + 1;
+    const last = C.rataUt;
     const L = slaColL;
 
     // Judul
@@ -624,129 +692,144 @@ function slaBuildSheet(wb, y, units) {
     const BAT = '$C$6:$C$9', FAK = '$E$6:$E$9';
 
     // Hitung posisi blok
-    const rekapTop = 12, rekapHdr = 13, rekapFirst = 14;
     const areas = TERMINALS.filter(t => units.some(u => u.terminal === t));
-    const rekapTot = rekapFirst + areas.length;
-    const bulanTop = rekapTot + 2, bulanHdr = bulanTop + 1, bulanFirst = bulanHdr + 1, bulanTot = bulanFirst + 12;
+    const kats = SLA_KATEGORI.filter(k => units.some(u => slaKategori(u) === k));
+    const areaTop = 12, areaFirst = areaTop + 2, areaTot = areaFirst + areas.length;
+    const katTop = areaTot + 2, katFirst = katTop + 2, katTot = katFirst + kats.length;
+    const bulanTop = katTot + 2, bulanHdr = bulanTop + 1, bulanFirst = bulanHdr + 1, bulanTot = bulanFirst + 12;
     const detTop = bulanTot + 2, detHdr1 = detTop + 1, detHdr2 = detHdr1 + 1, d0 = detHdr2 + 1, d1 = d0 + Math.max(units.length, 1) - 1;
     const rng = col => `$${L(col)}$${d0}:$${L(col)}$${d1}`;
     const rngBlock = (c0, c1) => `$${L(c0)}$${d0}:$${L(c1)}$${d1}`;
+    const AVB = rngBlock(C.av1, C.av1 + 11), UTB = rngBlock(C.u1, C.u1 + 11);
 
     // Nilai terhitung (untuk 'result' rumus)
+    const avg = a => a.length ? a.reduce((p, q) => p + q, 0) / a.length : null;
     const calc = units.map(u => {
         const cells = SLA_BULAN.map((_, i) => slaCell(u, y, i + 1));
+        const uts = SLA_BULAN.map((_, i) => slaUtOf(u.id, y, i + 1));
         const biaya = cells.reduce((s, c) => s + (c ? c.biaya : 0), 0), penuh = cells.reduce((s, c) => s + (c ? c.penuh : 0), 0);
-        const avs = cells.filter(Boolean).map(c => c.av);
-        return { u, cells, biaya, penuh, rata: avs.length ? avs.reduce((a, b) => a + b, 0) / avs.length : null };
+        return { u, kat: slaKategori(u), cells, uts, biaya, penuh, rata: avg(cells.filter(Boolean).map(c => c.av)), rataUt: avg(uts.filter(v => v !== null)) };
     });
+    const allAv = cs => cs.flatMap(x => x.cells.filter(Boolean).map(c => c.av));
+    const allUt = cs => cs.flatMap(x => x.uts.filter(v => v !== null));
+    const blank = v => (v === null ? '' : v);
 
-    // B. Rekap per area
-    secHead(rekapTop, `B. Rekap per area — Tahun ${y} (bulan berdata)`);
     const hdr = (r, c, t, o = {}) => set(r, c, t, { font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 9.5 }, fill: NAVY2, align: { horizontal: 'center', wrapText: true }, ...o });
-    ['Area', 'Jumlah unit', 'Rata-rata availability', 'Unit < 85%', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(rekapHdr, 2 + i, t));
-    areas.forEach((t, i) => {
-        const r = rekapFirst + i, cs = calc.filter(x => x.u.terminal === t);
-        const nCell = cs.reduce((s, x) => s + x.cells.filter(Boolean).length, 0), sumAv = cs.reduce((s, x) => s + x.cells.filter(Boolean).reduce((a, c) => a + c.av, 0), 0);
-        const pen = cs.reduce((s, x) => s + x.penuh, 0), bi = cs.reduce((s, x) => s + x.biaya, 0);
-        const zebra = i % 2 ? ZEBRA : undefined;
-        set(r, 2, t, { font: { bold: true }, fill: zebra });
-        set(r, 3, F(`COUNTIF(${rng(C.term)},B${r})`, cs.length), { fill: zebra, align: { horizontal: 'center' } });
-        set(r, 4, F(`IFERROR(SUMPRODUCT((${rng(C.term)}=B${r})*${rngBlock(C.av1, C.av1 + 11)})/SUMPRODUCT((${rng(C.term)}=B${r})*(${rngBlock(C.av1, C.av1 + 11)}<>"")),"")`, nCell ? sumAv / nCell : ''), { fmt: PCT, fill: zebra, align: { horizontal: 'center' } });
-        set(r, 5, F(`COUNTIFS(${rng(C.term)},B${r},${rng(C.rata)},"<0.85")`, cs.filter(x => x.rata !== null && x.rata < 0.85 - 1e-12).length), { fill: zebra, align: { horizontal: 'center' } });
-        set(r, 6, F(`SUMIF(${rng(C.term)},B${r},${rng(C.penuh)})`, pen), { fmt: RP, fill: zebra });
-        set(r, 7, F(`SUMIF(${rng(C.term)},B${r},${rng(C.biaya)})`, bi), { fmt: RP, fill: zebra });
-        set(r, 8, F(`F${r}-G${r}`, pen - bi), { fmt: RP, fill: zebra, font: { color: { argb: 'FFBE123C' } } });
-        set(r, 9, F(`IFERROR(H${r}/F${r},0)`, pen ? (pen - bi) / pen : 0), { fmt: PCT, fill: zebra, align: { horizontal: 'center' } });
-    });
-    {
-        const r = rekapTot, a = rekapFirst, b = rekapTot - 1;
-        const nCell = calc.reduce((s, x) => s + x.cells.filter(Boolean).length, 0), sumAv = calc.reduce((s, x) => s + x.cells.filter(Boolean).reduce((p, c) => p + c.av, 0), 0);
-        const pen = calc.reduce((s, x) => s + x.penuh, 0), bi = calc.reduce((s, x) => s + x.biaya, 0);
-        const tot = { font: { bold: true }, fill: 'FFFDF3D8' };
-        set(r, 2, 'TOTAL', tot);
-        set(r, 3, F(`SUM(C${a}:C${b})`, units.length), { ...tot, align: { horizontal: 'center' } });
-        set(r, 4, F(`IFERROR(SUMPRODUCT(${rngBlock(C.av1, C.av1 + 11)})/SUMPRODUCT(--(${rngBlock(C.av1, C.av1 + 11)}<>"")),"")`, nCell ? sumAv / nCell : ''), { ...tot, fmt: PCT, align: { horizontal: 'center' } });
-        set(r, 5, F(`SUM(E${a}:E${b})`, calc.filter(x => x.rata !== null && x.rata < 0.85 - 1e-12).length), { ...tot, align: { horizontal: 'center' } });
-        set(r, 6, F(`SUM(F${a}:F${b})`, pen), { ...tot, fmt: RP });
-        set(r, 7, F(`SUM(G${a}:G${b})`, bi), { ...tot, fmt: RP });
-        set(r, 8, F(`F${r}-G${r}`, pen - bi), { ...tot, fmt: RP });
-        set(r, 9, F(`IFERROR(H${r}/F${r},0)`, pen ? (pen - bi) / pen : 0), { ...tot, fmt: PCT, align: { horizontal: 'center' } });
-    }
+    const center = { align: { horizontal: 'center' } };
 
-    // C. Rekap per bulan
-    secHead(bulanTop, `C. Rekap per bulan — Tahun ${y}`);
-    ['Bulan', 'Unit berdata', 'Rata-rata availability', 'Unit-bulan tidak dibayar', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(bulanHdr, 2 + i, t));
+    // B & C. Rekap per area / per kategori (kolom B–J)
+    const rekapGroup = (top, title, firstLabel, names, keyCol, keyOf) => {
+        secHead(top, title);
+        const h = top + 1, first = top + 2, totR = first + names.length;
+        [firstLabel, 'Jumlah unit', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit < 85%', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(h, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
+        ws.getRow(h).height = 30;
+        names.forEach((n, i) => {
+            const r = first + i, cs = calc.filter(x => keyOf(x) === n), zebra = i % 2 ? ZEBRA : undefined;
+            const pen = cs.reduce((s, x) => s + x.penuh, 0), bi = cs.reduce((s, x) => s + x.biaya, 0);
+            const K = `(${rng(keyCol)}=$B${r})`;
+            set(r, 2, n, { font: { bold: true }, fill: zebra });
+            set(r, 3, F(`COUNTIF(${rng(keyCol)},$B${r})`, cs.length), { fill: zebra, ...center });
+            set(r, 4, F(`IFERROR(SUMPRODUCT(${K}*${AVB})/SUMPRODUCT(${K}*(${AVB}<>"")),"")`, blank(avg(allAv(cs)))), { fmt: PCT, fill: zebra, ...center });
+            set(r, 5, F(`IFERROR(SUMPRODUCT(${K}*${UTB})/SUMPRODUCT(${K}*(${UTB}<>"")),"")`, blank(avg(allUt(cs)))), { fmt: PCT, fill: zebra, ...center, font: { bold: true, color: { argb: 'FF0F766E' } } });
+            set(r, 6, F(`COUNTIFS(${rng(keyCol)},$B${r},${rng(C.rata)},"<0.85")`, cs.filter(x => x.rata !== null && x.rata < 0.85 - 1e-12).length), { fill: zebra, ...center });
+            set(r, 7, F(`SUMIF(${rng(keyCol)},$B${r},${rng(C.penuh)})`, pen), { fmt: RP, fill: zebra });
+            set(r, 8, F(`SUMIF(${rng(keyCol)},$B${r},${rng(C.biaya)})`, bi), { fmt: RP, fill: zebra });
+            set(r, 9, F(`G${r}-H${r}`, pen - bi), { fmt: RP, fill: zebra, font: { color: { argb: 'FFBE123C' } } });
+            set(r, 10, F(`IFERROR(I${r}/G${r},0)`, pen ? (pen - bi) / pen : 0), { fmt: PCT, fill: zebra, ...center });
+        });
+        const r = totR, a = first, b = totR - 1, tot = { font: { bold: true }, fill: 'FFFDF3D8' };
+        const pen = calc.reduce((s, x) => s + x.penuh, 0), bi = calc.reduce((s, x) => s + x.biaya, 0);
+        set(r, 2, 'TOTAL', tot);
+        set(r, 3, F(`SUM(C${a}:C${b})`, units.length), { ...tot, ...center });
+        set(r, 4, F(`IFERROR(SUMPRODUCT(${AVB})/SUMPRODUCT(--(${AVB}<>"")),"")`, blank(avg(allAv(calc)))), { ...tot, fmt: PCT, ...center });
+        set(r, 5, F(`IFERROR(SUMPRODUCT(${UTB})/SUMPRODUCT(--(${UTB}<>"")),"")`, blank(avg(allUt(calc)))), { ...tot, fmt: PCT, ...center });
+        set(r, 6, F(`SUM(F${a}:F${b})`, calc.filter(x => x.rata !== null && x.rata < 0.85 - 1e-12).length), { ...tot, ...center });
+        set(r, 7, F(`SUM(G${a}:G${b})`, pen), { ...tot, fmt: RP });
+        set(r, 8, F(`SUM(H${a}:H${b})`, bi), { ...tot, fmt: RP });
+        set(r, 9, F(`G${r}-H${r}`, pen - bi), { ...tot, fmt: RP });
+        set(r, 10, F(`IFERROR(I${r}/G${r},0)`, pen ? (pen - bi) / pen : 0), { ...tot, fmt: PCT, ...center });
+    };
+    rekapGroup(areaTop, `B. Rekap per area — Tahun ${y} (bulan berdata)`, 'Area', areas, C.term, x => x.u.terminal);
+    rekapGroup(katTop, `C. Rekap per kategori alat — Tahun ${y}`, 'Kategori alat', kats, C.kat, x => x.kat);
+
+    // D. Rekap per bulan
+    secHead(bulanTop, `D. Rekap per bulan — Tahun ${y} (availability & utilisasi bersanding)`);
+    ['Bulan', 'Unit berdata', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit-bulan tidak dibayar', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(bulanHdr, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
+    ws.getRow(bulanHdr).height = 30;
     SLA_BULAN_PANJANG.forEach((b, i) => {
-        const r = bulanFirst + i, av = L(C.av1 + i), f = L(C.f1 + i), bi = L(C.b1 + i);
-        const cs = calc.map(x => x.cells[i]).filter(Boolean);
+        const r = bulanFirst + i, av = L(C.av1 + i), ut = L(C.u1 + i), f = L(C.f1 + i), bi = L(C.b1 + i);
+        const cs = calc.map(x => x.cells[i]).filter(Boolean), us = calc.map(x => x.uts[i]).filter(v => v !== null);
         const pen = cs.reduce((s, c) => s + c.penuh, 0), byr = cs.reduce((s, c) => s + c.biaya, 0);
         const zebra = i % 2 ? ZEBRA : undefined;
         set(r, 2, b, { font: { bold: true }, fill: zebra });
-        set(r, 3, F(`COUNT($${av}$${d0}:$${av}$${d1})`, cs.length), { fill: zebra, align: { horizontal: 'center' } });
-        set(r, 4, F(`IFERROR(AVERAGE($${av}$${d0}:$${av}$${d1}),"")`, cs.length ? cs.reduce((s, c) => s + c.av, 0) / cs.length : ''), { fmt: PCT, fill: zebra, align: { horizontal: 'center' } });
-        set(r, 5, F(`COUNTIF($${f}$${d0}:$${f}$${d1},0)`, cs.filter(c => c.faktor === 0).length), { fill: zebra, align: { horizontal: 'center' } });
-        set(r, 6, F(`SUMPRODUCT(${rng(C.harga)},--($${av}$${d0}:$${av}$${d1}<>""))`, pen), { fmt: RP, fill: zebra });
-        set(r, 7, F(`SUM($${bi}$${d0}:$${bi}$${d1})`, byr), { fmt: RP, fill: zebra });
-        set(r, 8, F(`F${r}-G${r}`, pen - byr), { fmt: RP, fill: zebra, font: { color: { argb: 'FFBE123C' } } });
-        set(r, 9, F(`IFERROR(H${r}/F${r},0)`, pen ? (pen - byr) / pen : 0), { fmt: PCT, fill: zebra, align: { horizontal: 'center' } });
+        set(r, 3, F(`COUNT($${av}$${d0}:$${av}$${d1})`, cs.length), { fill: zebra, ...center });
+        set(r, 4, F(`IFERROR(AVERAGE($${av}$${d0}:$${av}$${d1}),"")`, blank(avg(cs.map(c => c.av)))), { fmt: PCT, fill: zebra, ...center });
+        set(r, 5, F(`IFERROR(AVERAGE($${ut}$${d0}:$${ut}$${d1}),"")`, blank(avg(us))), { fmt: PCT, fill: zebra, ...center, font: { bold: true, color: { argb: 'FF0F766E' } } });
+        set(r, 6, F(`COUNTIF($${f}$${d0}:$${f}$${d1},0)`, cs.filter(c => c.faktor === 0).length), { fill: zebra, ...center });
+        set(r, 7, F(`SUMPRODUCT(${rng(C.harga)},--($${av}$${d0}:$${av}$${d1}<>""))`, pen), { fmt: RP, fill: zebra });
+        set(r, 8, F(`SUM($${bi}$${d0}:$${bi}$${d1})`, byr), { fmt: RP, fill: zebra });
+        set(r, 9, F(`G${r}-H${r}`, pen - byr), { fmt: RP, fill: zebra, font: { color: { argb: 'FFBE123C' } } });
+        set(r, 10, F(`IFERROR(I${r}/G${r},0)`, pen ? (pen - byr) / pen : 0), { fmt: PCT, fill: zebra, ...center });
     });
     {
         const r = bulanTot, a = bulanFirst, b = bulanTot - 1, tot = { font: { bold: true }, fill: 'FFFDF3D8' };
         const pen = calc.reduce((s, x) => s + x.penuh, 0), bi = calc.reduce((s, x) => s + x.biaya, 0);
         set(r, 2, 'TOTAL', tot);
-        set(r, 3, F(`SUM(C${a}:C${b})`, calc.reduce((s, x) => s + x.cells.filter(Boolean).length, 0)), { ...tot, align: { horizontal: 'center' } });
-        set(r, 4, F(`D${rekapTot}`, (() => { const cs = calc.flatMap(x => x.cells.filter(Boolean)); return cs.length ? cs.reduce((a, c) => a + c.av, 0) / cs.length : ''; })()), { ...tot, fmt: PCT, align: { horizontal: 'center' } });
-        set(r, 5, F(`SUM(E${a}:E${b})`, calc.reduce((s, x) => s + x.cells.filter(c => c && c.faktor === 0).length, 0)), { ...tot, align: { horizontal: 'center' } });
-        set(r, 6, F(`SUM(F${a}:F${b})`, pen), { ...tot, fmt: RP });
-        set(r, 7, F(`SUM(G${a}:G${b})`, bi), { ...tot, fmt: RP });
-        set(r, 8, F(`F${r}-G${r}`, pen - bi), { ...tot, fmt: RP });
-        set(r, 9, F(`IFERROR(H${r}/F${r},0)`, pen ? (pen - bi) / pen : 0), { ...tot, fmt: PCT, align: { horizontal: 'center' } });
+        set(r, 3, F(`SUM(C${a}:C${b})`, allAv(calc).length), { ...tot, ...center });
+        set(r, 4, F(`D${areaTot}`, blank(avg(allAv(calc)))), { ...tot, fmt: PCT, ...center });
+        set(r, 5, F(`E${areaTot}`, blank(avg(allUt(calc)))), { ...tot, fmt: PCT, ...center });
+        set(r, 6, F(`SUM(F${a}:F${b})`, calc.reduce((s, x) => s + x.cells.filter(c => c && c.faktor === 0).length, 0)), { ...tot, ...center });
+        set(r, 7, F(`SUM(G${a}:G${b})`, pen), { ...tot, fmt: RP });
+        set(r, 8, F(`SUM(H${a}:H${b})`, bi), { ...tot, fmt: RP });
+        set(r, 9, F(`G${r}-H${r}`, pen - bi), { ...tot, fmt: RP });
+        set(r, 10, F(`IFERROR(I${r}/G${r},0)`, pen ? (pen - bi) / pen : 0), { ...tot, fmt: PCT, ...center });
     }
 
-    // D. Detail per unit
-    secHead(detTop, `D. Detail per unit — availability (input, biru), faktor bayar & biaya per bulan`);
-    const fixedHdr = [[C.no, 'No'], [C.term, 'Terminal'], [C.grup, 'Grup kontrak'], [C.nama, 'Nama unit (kontrak)'], [C.nomor, 'Nomor alat SIMALAT'], [C.harga, 'Harga / unit / bulan (Rp)']];
+    // E. Detail per unit
+    secHead(detTop, `E. Detail per unit — availability & utilisasi (input, biru), faktor bayar & biaya per bulan`);
+    const fixedHdr = [[C.no, 'No'], [C.term, 'Terminal'], [C.kat, 'Kategori alat'], [C.grup, 'Grup kontrak'], [C.nama, 'Nama unit (kontrak)'], [C.nomor, 'Nomor alat SIMALAT'], [C.harga, 'Harga / unit / bulan (Rp)']];
     fixedHdr.forEach(([c, t]) => { ws.mergeCells(detHdr1, c, detHdr2, c); hdr(detHdr1, c, t); });
     ws.mergeCells(detHdr1, C.avPrev, detHdr1, C.avPrev + 1); hdr(detHdr1, C.avPrev, `Avail. ${y - 1}`, { fill: 'FF475569' });
     hdr(detHdr2, C.avPrev, 'Nov', { fill: 'FF475569' }); hdr(detHdr2, C.avPrev + 1, 'Des', { fill: 'FF475569' });
-    [[C.av1, `Availability ${y}`, NAVY2], [C.f1, 'Faktor bayar', 'FF0F766E'], [C.b1, 'Biaya dibayar (Rp)', 'FF1E3A8A']].forEach(([c0, t, col]) => {
+    [[C.av1, `Availability ${y}`, NAVY2], [C.u1, `Utilisasi ${y}`, 'FF0F766E'], [C.f1, 'Faktor bayar', 'FF475569'], [C.b1, 'Biaya dibayar (Rp)', 'FF1E3A8A']].forEach(([c0, t, col]) => {
         ws.mergeCells(detHdr1, c0, detHdr1, c0 + 11); hdr(detHdr1, c0, t, { fill: col });
         SLA_BULAN.forEach((b, i) => hdr(detHdr2, c0 + i, b, { fill: col }));
     });
-    [[C.penuh, 'Nilai penuh (Rp)'], [C.biaya, 'Total dibayar (Rp)'], [C.pot, 'Potongan (Rp)'], [C.rata, 'Rata-rata avail.']].forEach(([c, t]) => { ws.mergeCells(detHdr1, c, detHdr2, c); hdr(detHdr1, c, t, { fill: NAVY }); });
+    [[C.penuh, 'Nilai penuh (Rp)'], [C.biaya, 'Total dibayar (Rp)'], [C.pot, 'Potongan (Rp)'], [C.rata, 'Rata-rata avail.'], [C.rataUt, 'Rata-rata util.']].forEach(([c, t]) => { ws.mergeCells(detHdr1, c, detHdr2, c); hdr(detHdr1, c, t, { fill: NAVY }); });
 
     calc.forEach((x, i) => {
         const r = d0 + i, u = x.u, zebra = i % 2 ? ZEBRA : undefined;
-        set(r, C.no, i + 1, { fill: zebra, align: { horizontal: 'center' } });
+        set(r, C.no, i + 1, { fill: zebra, ...center });
         set(r, C.term, u.terminal, { fill: zebra });
+        set(r, C.kat, x.kat, { fill: zebra });
         set(r, C.grup, u.grup || '', { fill: zebra });
         set(r, C.nama, u.nama_unit, { fill: zebra });
         set(r, C.nomor, u.nomor_alat || '', { fill: zebra, font: { color: { argb: u.peralatan_id ? INK : 'FFB45309' } } });
         set(r, C.harga, u.harga_bulanan, { fmt: RP, fill: zebra, font: { color: { argb: INPUT } } });
         [[11, y - 1], [12, y - 1]].forEach(([m, yy], k) => {
             const v = slaAvOf(u.id, yy, m);
-            set(r, C.avPrev + k, v === null ? null : v, { fmt: PCT, fill: 'FFF1F5F9', font: { color: { argb: INPUT } }, align: { horizontal: 'center' } });
+            set(r, C.avPrev + k, v === null ? null : v, { fmt: PCT, fill: 'FFF1F5F9', font: { color: { argb: INPUT } }, ...center });
         });
         for (let m = 0; m < 12; m++) {
             const c = x.cells[m];
             const avA = `${L(C.av1 + m)}${r}`, p1 = `${L(C.av1 + m - 1)}${r}`, p2 = `${L(C.av1 + m - 2)}${r}`;
-            set(r, C.av1 + m, c ? c.av : null, { fmt: PCT, fill: zebra, font: { color: { argb: INPUT } }, align: { horizontal: 'center' } });
+            set(r, C.av1 + m, c ? c.av : null, { fmt: PCT, fill: zebra, font: { color: { argb: INPUT } }, ...center });
+            set(r, C.u1 + m, x.uts[m], { fmt: PCT, fill: zebra, font: { color: { argb: INPUT } }, ...center });
             set(r, C.f1 + m, F(`IF(${avA}="","",IF(AND(${avA}=0,${p1}<>"",${p2}<>"",N(${p1})=0,N(${p2})=0),0,LOOKUP(${avA},${BAT},${FAK})))`, c ? c.faktor : ''),
-                { fmt: PCT0, fill: c && c.faktor === 0 ? 'FFFECACA' : zebra, align: { horizontal: 'center' } });
+                { fmt: PCT0, fill: c && c.faktor === 0 ? 'FFFECACA' : zebra, ...center });
             set(r, C.b1 + m, F(`IF(${L(C.f1 + m)}${r}="","",$${L(C.harga)}${r}*${L(C.f1 + m)}${r})`, c ? c.biaya : ''), { fmt: RP, fill: zebra });
         }
         set(r, C.penuh, F(`$${L(C.harga)}${r}*COUNT(${L(C.av1)}${r}:${L(C.av1 + 11)}${r})`, x.penuh), { fmt: RP, fill: zebra });
         set(r, C.biaya, F(`SUM(${L(C.b1)}${r}:${L(C.b1 + 11)}${r})`, x.biaya), { fmt: RP, fill: zebra, font: { bold: true } });
         set(r, C.pot, F(`${L(C.penuh)}${r}-${L(C.biaya)}${r}`, x.penuh - x.biaya), { fmt: RP, fill: zebra, font: { color: { argb: 'FFBE123C' } } });
-        set(r, C.rata, F(`IFERROR(AVERAGE(${L(C.av1)}${r}:${L(C.av1 + 11)}${r}),"")`, x.rata === null ? '' : x.rata), { fmt: PCT, fill: zebra, align: { horizontal: 'center' } });
+        set(r, C.rata, F(`IFERROR(AVERAGE(${L(C.av1)}${r}:${L(C.av1 + 11)}${r}),"")`, blank(x.rata)), { fmt: PCT, fill: zebra, ...center });
+        set(r, C.rataUt, F(`IFERROR(AVERAGE(${L(C.u1)}${r}:${L(C.u1 + 11)}${r}),"")`, blank(x.rataUt)), { fmt: PCT, fill: zebra, ...center, font: { bold: true, color: { argb: 'FF0F766E' } } });
     });
 
     // Lebar kolom & tampilan
-    const widths = { [C.no]: 5, [C.term]: 14, [C.grup]: 18, [C.nama]: 40, [C.nomor]: 18, [C.harga]: 16, [C.penuh]: 16, [C.biaya]: 16, [C.pot]: 15, [C.rata]: 11 };
+    const widths = { [C.no]: 5, [C.term]: 20, [C.kat]: 18, [C.grup]: 18, [C.nama]: 40, [C.nomor]: 18, [C.harga]: 16, [C.penuh]: 16, [C.biaya]: 16, [C.pot]: 15, [C.rata]: 11, [C.rataUt]: 11 };
     for (let c = 1; c <= last; c++) ws.getColumn(c).width = widths[c] || (c >= C.b1 && c < C.b1 + 12 ? 13 : 8.5);
-    // Rekap memakai kolom B–I: lebarkan bila perlu
-    ws.getColumn(2).width = Math.max(ws.getColumn(2).width || 0, 14);
-    ws.getRow(rekapHdr).height = 30; ws.getRow(bulanHdr).height = 30; ws.getRow(detHdr1).height = 18; ws.getRow(detHdr2).height = 18;
+    ws.getRow(detHdr1).height = 18; ws.getRow(detHdr2).height = 18;
     ws.pageSetup = { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
-    return { ws, d0, d1, C, rekapFirst, rekapTot, bulanFirst, bulanTot };
+    return { ws, d0, d1, C, areaFirst, areaTot, katFirst, katTot, bulanFirst, bulanTot };
 }
