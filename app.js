@@ -2,6 +2,10 @@ const SUPABASE_URL = 'https://yacnpsjhofestqrgsfvf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhY25wc2pob2Zlc3RxcmdzZnZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2MzA5NzgsImV4cCI6MjExMDIwNjk3OH0.8pQdGTiL_KZYI_l2JYvt_7WfpceLpXIJn8rcU60yWsg';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Tahun acuan usia alat = tahun berjalan (otomatis berganti setiap 1 Januari).
+// Untuk mengunci ke tahun tertentu (mis. laporan RKAP), ganti menjadi angka, contoh: const BASE_YEAR = 2026;
+const BASE_YEAR = new Date().getFullYear();
+
 let rawData = [];
 let userRole = 'viewer';
 let selectedBranch = 'Semua';
@@ -312,13 +316,13 @@ function updateDashboard() {
 
     const validYears = scopeData.filter(d => d.tahun_pembuatan && d.tahun_pembuatan > 1950);
     const avgAge = validYears.length > 0 
-        ? (validYears.reduce((sum, d) => sum + (2026 - d.tahun_pembuatan), 0) / validYears.length).toFixed(1)
+        ? (validYears.reduce((sum, d) => sum + (BASE_YEAR - d.tahun_pembuatan), 0) / validYears.length).toFixed(1)
         : 0;
 
     let oldestText = 'Tertua: -';
     if (validYears.length > 0) {
         const oldest = [...validYears].sort((a, b) => a.tahun_pembuatan - b.tahun_pembuatan)[0];
-        oldestText = `Tertua: ${oldest.nomor_alat} · ${2026 - oldest.tahun_pembuatan} th (${oldest.terminal.toUpperCase()})`;
+        oldestText = `Tertua: ${oldest.nomor_alat} · ${BASE_YEAR - oldest.tahun_pembuatan} th (${oldest.terminal.toUpperCase()})`;
     }
     document.getElementById('kpiRataUsia').innerText = avgAge;
     document.getElementById('kpiTertua').innerText = oldestText;
@@ -394,7 +398,7 @@ function updateDashboard() {
 
     let u1_10 = 0, u10_15 = 0, u20plus = 0, trulyAbove20 = 0;
     validYears.forEach(d => {
-        const age = 2026 - d.tahun_pembuatan;
+        const age = BASE_YEAR - d.tahun_pembuatan;
         if (age <= 10) u1_10++;
         else if (age <= 15) u10_15++;
         else {
@@ -542,7 +546,7 @@ function renderTable() {
 
         if (ageFilter) {
             if (!item.tahun_pembuatan) return false;
-            const age = 2026 - item.tahun_pembuatan;
+            const age = BASE_YEAR - item.tahun_pembuatan;
             if (ageFilter === '1-10' && age > 10) return false;
             if (ageFilter === '10-15' && (age <= 10 || age > 15)) return false;
             if (ageFilter === '20+' && age <= 15) return false;
@@ -561,7 +565,7 @@ function renderTable() {
     document.getElementById('tableCountBadge').innerText = `Menampilkan ${filtered.length} dari ${baseData.length} unit`;
 
     filtered.forEach((item, idx) => {
-        const age = item.tahun_pembuatan ? (2026 - item.tahun_pembuatan) : null;
+        const age = item.tahun_pembuatan ? (BASE_YEAR - item.tahun_pembuatan) : null;
         let ageBadge = '<span class="text-slate-400">-</span>';
         if (age !== null) {
             if (age > 20) ageBadge = `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[10px]">${age} th</span>`;
@@ -735,13 +739,18 @@ function exportCSV() {
     a.click();
 }
 
-window.onload = checkSession;
+function applyBaseYear() {
+    document.querySelectorAll('.base-year').forEach(el => { el.textContent = BASE_YEAR; });
+    const inTahun = document.getElementById('inTahun');
+    if (inTahun) inTahun.max = BASE_YEAR;
+}
+
+window.onload = () => { applyBaseYear(); checkSession(); };
 // =====================================================================
 //  EKSPOR EXCEL (.xlsx) — sheet "Ringkasan Eksekutif" + "Database Alat"
 //  Mengikuti data yang sedang tampil di tabel (cabang & filter aktif).
 // =====================================================================
 const EXCELJS_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
-const BASE_YEAR = 2026;
 const NAMA_JENIS = {
     QCC: 'Quay Container Crane', GLC: 'Gantry Luffing Crane', GJC: 'Gantry Jib Crane', FJC: 'Fixed Jib Crane',
     RTG: 'Rubber Tyred Gantry', RMGC: 'Rail Mounted Gantry Crane', RST: 'Reach Stacker', SIL: 'Side Loader',
