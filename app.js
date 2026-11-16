@@ -209,7 +209,7 @@ const horizontalBarLabelsPlugin = {
                     const barWidth = Math.abs(bar.x - bar.base);
                     if (bar.x > rightX) rightX = bar.x;
                     if (barWidth > 14) {
-                        ctx.fillStyle = ds.label === 'Belum Diisi' ? '#1e293b' : '#ffffff';
+                        ctx.fillStyle = (ds.label === 'Belum Diisi' || ds.label === 'Non Operasional') ? '#1e293b' : '#ffffff';
                         ctx.fillText(ds.data[i], bar.base + barWidth / 2, yPos);
                     }
                 }
@@ -356,45 +356,8 @@ function updateDashboard() {
     document.getElementById('lblEnEmpty').innerText = cEmpty;
     document.getElementById('pctEnEmpty').innerText = enPct(cEmpty);
 
-    const dermagaArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Utama Dermaga').length);
-    const lapanganArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Utama Lapangan').length);
-    const pendukungArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Pendukung').length);
-    const angkutArr = TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === 'Alat Angkut').length);
-
-    const datasets = [
-        { label: 'Alat Utama Dermaga', data: dermagaArr, backgroundColor: '#1e3a8a', borderRadius: 2 },
-        { label: 'Alat Utama Lapangan', data: lapanganArr, backgroundColor: '#3b82f6', borderRadius: 2 }
-    ];
-    if (chartMode === 'semua') {
-        datasets.push({ label: 'Alat Pendukung', data: pendukungArr, backgroundColor: '#94a3b8', borderRadius: 2 });
-        datasets.push({ label: 'Alat Angkut', data: angkutArr, backgroundColor: '#0f766e', borderRadius: 2 });
-    }
-
-    const totalArmadaChart = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
-    document.getElementById('chartTotalFooter').innerText = `Total armada: ${totalArmadaChart} unit`;
-
-    if (barChartInstance) barChartInstance.destroy();
-    barChartInstance = new Chart(document.getElementById('terminalChart'), {
-        type: 'bar',
-        data: { labels: TERMINALS, datasets },
-        plugins: [barDataLabelsPlugin],
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: { padding: { top: 24 } },
-            onClick: (e, elements) => {
-                if (elements.length > 0) {
-                    const idx = elements[0].index;
-                    selectBranch(selectedBranch === TERMINALS[idx] ? 'Semua' : TERMINALS[idx]);
-                }
-            },
-            plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
-            scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' } }
-            }
-        }
-    });
+    if (selectedBranch === 'Semua') renderFleetChartAll(baseData);
+    else renderFleetChartBranch(scopeData);
 
     let u1_10 = 0, u10_15 = 0, u20plus = 0, trulyAbove20 = 0;
     validYears.forEach(d => {
@@ -499,6 +462,119 @@ function updateDashboard() {
             scales: {
                 x: { stacked: true, beginAtZero: true, grid: { color: '#f8fafc' }, border: { display: false } },
                 y: { stacked: true, grid: { display: false }, ticks: { font: { weight: 'bold', size: 11 }, color: '#334155' } }
+            }
+        }
+    });
+}
+
+// ---------- Grafik sebaran armada ----------
+const FLEET_CAT_COLOR = { 'Alat Utama Dermaga': '#1e3a8a', 'Alat Utama Lapangan': '#3b82f6', 'Alat Pendukung': '#94a3b8', 'Alat Angkut': '#0f766e' };
+function setFleetChartTitle(text) {
+    const card = document.getElementById('terminalChart').closest('.card');
+    const h = card && card.querySelector('h3');
+    if (h) h.innerHTML = text;
+}
+
+// Semua cabang: batang bertumpuk per cabang (tampilan lama).
+function renderFleetChartAll(baseData) {
+    const cats = chartMode === 'semua' ? CATEGORIES_4 : CATEGORIES_4.slice(0, 2);
+    const datasets = cats.map(c => ({
+        label: c, backgroundColor: FLEET_CAT_COLOR[c], borderRadius: 2,
+        data: TERMINALS.map(t => baseData.filter(d => d.terminal === t && d.kategori4 === c).length)
+    }));
+    const total = datasets.reduce((sum, ds) => sum + ds.data.reduce((a, b) => a + b, 0), 0);
+    setFleetChartTitle('Jumlah alat per cabang &amp; kategori');
+    document.getElementById('chartTotalFooter').innerText = `Total armada: ${total} unit`;
+
+    if (barChartInstance) barChartInstance.destroy();
+    barChartInstance = new Chart(document.getElementById('terminalChart'), {
+        type: 'bar',
+        data: { labels: TERMINALS, datasets },
+        plugins: [barDataLabelsPlugin],
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 24 } },
+            onClick: (e, elements) => { if (elements.length > 0) selectBranch(TERMINALS[elements[0].index]); },
+            plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 11 } } } },
+            scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' } } }
+        }
+    });
+}
+
+// Satu cabang: batang horizontal per jenis alat, warna = kategori, bagian pucat = non operasional.
+function renderFleetChartBranch(scopeData) {
+    const cats = chartMode === 'semua' ? CATEGORIES_4 : CATEGORIES_4.slice(0, 2);
+    const data = scopeData.filter(d => cats.includes(d.kategori4));
+    const order = (typeof JENIS_ORDER !== 'undefined') ? JENIS_ORDER : [];
+    const rank = j => { const i = order.indexOf(j); return i < 0 ? 999 : i; };
+    const groups = {};
+    data.forEach(d => {
+        const k = d.jenis || '-';
+        (groups[k] ||= { jenis: k, kat: d.kategori4, ops: 0, non: 0, kosong: 0 });
+        if (d.status === 'Operasional') groups[k].ops++;
+        else if (d.status === 'Non Operasional') groups[k].non++;
+        else groups[k].kosong++;
+    });
+    const rows = Object.values(groups).sort((a, b) => cats.indexOf(a.kat) - cats.indexOf(b.kat) || rank(a.jenis) - rank(b.jenis));
+    const nama = j => (typeof NAMA_JENIS !== 'undefined' && NAMA_JENIS[j]) ? NAMA_JENIS[j] : j;
+    const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+    const col = r => FLEET_CAT_COLOR[r.kat];
+
+    const opsTot = data.filter(d => d.status === 'Operasional').length;
+    setFleetChartTitle(`Komposisi alat · <span class="text-blue-700">${selectedBranch}</span>`);
+    document.getElementById('chartTotalFooter').innerHTML =
+        `<span class="font-normal text-slate-500 mr-3"><button onclick="selectBranch('Semua')" class="text-blue-700 font-semibold hover:underline cursor-pointer">← Bandingkan semua cabang</button></span>` +
+        `Total ${selectedBranch}: ${data.length} unit · ${opsTot} operasional`;
+
+    const canvas = document.getElementById('terminalChart');
+    if (barChartInstance) barChartInstance.destroy();
+    if (!rows.length) { barChartInstance = null; canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); return; }
+
+    const presentCats = cats.filter(c => rows.some(r => r.kat === c));
+    barChartInstance = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: rows.map(r => [r.jenis, nama(r.jenis)]),
+            datasets: [
+                { label: 'Operasional', data: rows.map(r => r.ops), backgroundColor: rows.map(col), borderRadius: 4, borderSkipped: false, barPercentage: 0.72, categoryPercentage: 0.9 },
+                { label: 'Non Operasional', data: rows.map(r => r.non), backgroundColor: rows.map(r => alpha(col(r), 0.28)), borderColor: rows.map(col), borderWidth: 1, borderRadius: 4, borderSkipped: false, barPercentage: 0.72, categoryPercentage: 0.9 },
+                { label: 'Belum Diisi', data: rows.map(r => r.kosong), backgroundColor: '#e2e8f0', borderRadius: 4, borderSkipped: false, barPercentage: 0.72, categoryPercentage: 0.9 }
+            ]
+        },
+        plugins: [horizontalBarLabelsPlugin],
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            layout: { padding: { right: 44, top: 4 } },
+            onClick: (e, el) => { if (el.length) filterByCategory(rows[el[0].index].kat); },
+            plugins: {
+                legend: {
+                    position: 'top', align: 'start',
+                    labels: {
+                        boxWidth: 10, boxHeight: 10, font: { size: 11 }, padding: 12,
+                        generateLabels: () => [
+                            ...presentCats.map(c => ({ text: c, fillStyle: FLEET_CAT_COLOR[c], strokeStyle: FLEET_CAT_COLOR[c], lineWidth: 0, hidden: false, datasetIndex: -1 })),
+                            { text: 'Pucat = non operasional', fillStyle: 'rgba(100,116,139,.25)', strokeStyle: '#64748b', lineWidth: 1, hidden: false, datasetIndex: -1 }
+                        ]
+                    },
+                    onClick: () => { }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => { const r = rows[items[0].dataIndex]; return `${r.jenis} · ${nama(r.jenis)}`; },
+                        label: c => ` ${c.dataset.label}: ${c.raw} unit`,
+                        footer: items => { const r = rows[items[0].dataIndex]; return `${r.kat} · total ${r.ops + r.non + r.kosong} unit`; }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: { precision: 0, font: { size: 10 }, color: '#94a3b8' } },
+                y: {
+                    stacked: true, grid: { display: false }, border: { display: false },
+                    ticks: {
+                        autoSkip: false, font: ctx => ({ size: ctx.index === undefined ? 11 : 11, weight: '600' }), color: '#0f172a',
+                        callback: function (v, i) { const r = rows[i]; return [r.jenis, nama(r.jenis)]; }
+                    }
+                }
             }
         }
     });
