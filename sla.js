@@ -22,8 +22,10 @@ const SLA_KAT_COLOR = { 'Alat Utama Dermaga': '#1e3a8a', 'Alat Utama Lapangan': 
 let slaBands = SLA_DEFAULT_BANDS.slice();
 let slaUnits = [];
 let slaAv = new Map();            // `${unit_id}|${tahun}|${bulan}` → baris availability_bulanan
-let slaState = { tahun: null, bulan: null, mode: 'bulan', view: 'both', ready: false, error: null };
+let slaState = { tahun: null, bulan: null, mode: 'bulan', view: 'both', drill: null, ready: false, error: null };
 let slaChartInstance = null;
+let slaSigapMap = new Map();     // Code Alat SIGAP → id unit kontrak (tabel kode_sigap_map)
+let slaSigapMapOk = false;
 
 const slaKey = (u, y, m) => `${u}|${y}|${m}`;
 const slaEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +77,8 @@ async function slaLoad() {
         slaAv = new Map();
         avs.forEach(r => slaAv.set(slaKey(r.unit_id, r.tahun, r.bulan), {
             ...r, availability: r.availability === null ? null : +r.availability, utilisasi: r.utilisasi === null ? null : +r.utilisasi }));
+        try { const mp = await slaFetchAll('kode_sigap_map', 'kode'); slaSigapMap = new Map(mp.map(r => [r.kode, r.unit_id])); slaSigapMapOk = true; }
+        catch (e) { slaSigapMap = new Map(); slaSigapMapOk = false; }
         slaState.error = null;
         if (!slaState.tahun) {
             const last = slaLatestPeriod();
@@ -155,9 +159,9 @@ function slaUnitsInScope(branch = slaBranch()) {
 
 // Ringkasan sekumpulan unit pada sekumpulan bulan.
 function slaSummarize(units, y, months) {
-    const s = { unit: units.length, unitData: 0, nCell: 0, sumAv: 0, nUt: 0, sumUt: 0, unitUt: 0, biaya: 0, penuh: 0, potongan: 0, bawahTarget: 0, tidakDibayar: 0, nolSeri: 0 };
+    const s = { unit: units.length, unitData: 0, nCell: 0, sumAv: 0, nUt: 0, sumUt: 0, unitUt: 0, biaya: 0, penuh: 0, potongan: 0, bawahTarget: 0, tidakDibayar: 0, nolSeri: 0, unitNol3: 0 };
     units.forEach(u => {
-        let has = false, uSum = 0, uN = 0, tSum = 0, tN = 0;
+        let has = false, uSum = 0, uN = 0, tSum = 0, tN = 0, nol3 = false;
         months.forEach(m => {
             const ut = slaUtOf(u.id, y, m);
             if (ut !== null) { s.nUt++; s.sumUt += ut; tSum += ut; tN++; }
@@ -165,11 +169,12 @@ function slaSummarize(units, y, months) {
             if (!c) return;
             has = true; uSum += c.av; uN++;
             s.nCell++; s.sumAv += c.av; s.biaya += c.biaya; s.penuh += c.penuh; s.potongan += c.potongan;
-            if (c.faktor === 0) s.tidakDibayar++;
+            if (c.faktor === 0) { s.tidakDibayar++; nol3 = true; }
             if (c.av === 0 && c.nolBeruntun >= 2 && c.faktor > 0) s.nolSeri++;
         });
         if (has) { s.unitData++; if (uSum / uN < 0.85 - 1e-12) s.bawahTarget++; }
         if (tN) s.unitUt++;
+        if (nol3) s.unitNol3++;
     });
     s.avgAv = s.nCell ? s.sumAv / s.nCell : null;
     s.avgUt = s.nUt ? s.sumUt / s.nUt : null;
@@ -235,33 +240,39 @@ function slaRender() {
                 <button onclick="slaSetMode('kumulatif')" class="px-3 py-1.5 cursor-pointer ${slaState.mode === 'kumulatif' ? 'tab-active' : 'tab-inactive'}">Kumulatif Jan–${SLA_BULAN[slaState.bulan - 1]}</button>
             </div>
             <div class="ml-auto flex gap-2">
-                ${slaCanEdit() ? `<button id="btnSlaInput" onclick="slaOpenInput()" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"><i class="fa-solid fa-pen-to-square mr-1.5"></i>Input Availability</button>` : ''}
+                ${slaCanEdit() ? `<button id="btnSlaInput" onclick="slaOpenInput()" class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"><i class="fa-solid fa-pen-to-square mr-1.5"></i>Input Availability</button><button id="btnSlaUpload" onclick="slaOpenUpload()" class="bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"><i class="fa-solid fa-file-arrow-up mr-1.5 text-emerald-700"></i>Upload Excel SIGAP</button>` : ''}
                 <button id="btnSlaExcel" onclick="slaExportExcel(this)" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"><i class="fa-solid fa-file-excel mr-1.5"></i>Excel SLA ${y}</button>
             </div>
         </div>`;
 
-    const kpi = (label, value, sub, tone = 'text-slate-900', icon = '') => `
-        <div class="card p-4">
+    const kpi = (label, value, sub, tone = 'text-slate-900', icon = '', drill = null, style = '') => {
+        const on = drill && slaState.drill === drill;
+        const act = drill ? `onclick="slaSetDrill('${drill}')" role="button" tabindex="0" title="Klik untuk melihat daftar unit"` : '';
+        return `
+        <div class="card p-4 ${drill ? 'sla-kpi-click' : ''} ${on ? 'sla-kpi-on' : ''}" ${act}>
             <div class="flex justify-between items-start"><p class="eyebrow">${label}</p>${icon}</div>
-            <h3 class="text-2xl font-extrabold num mt-2 ${tone}">${value}</h3>
+            <h3 class="text-2xl font-extrabold num mt-2 ${tone}" ${style ? `style="${style}"` : ''}>${value}</h3>
             <p class="text-[11px] text-slate-500 mt-1 num">${sub}</p>
+            ${drill ? `<p class="text-[10.5px] font-semibold mt-2 ${on ? 'text-blue-700' : 'text-slate-400'}"><i class="fa-solid ${on ? 'fa-chevron-up' : 'fa-list-ul'} mr-1"></i>${on ? 'Tutup daftar' : 'Lihat daftar unit'}</p>` : ''}
         </div>`;
+    };
     const avTone = S.avgAv === null ? 'text-slate-400' : S.avgAv >= 0.85 ? 'text-emerald-700' : S.avgAv >= 0.64 ? 'text-amber-600' : 'text-rose-700';
     const kpis = `
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
             ${kpi('Rata-rata availability', slaPct(S.avgAv), `${periodText} · target ≥ 85%`, avTone, '<i class="fa-solid fa-gauge-high text-slate-400"></i>')}
-            ${kpi('Rata-rata utilisasi', slaPct(S.avgUt), S.nUt ? `${periodText} · ${S.unitUt} unit berdata` : 'belum diisi — isi lewat Input Availability', S.avgUt === null ? 'text-slate-400' : '', '<i class="fa-solid fa-gears text-slate-400"></i>').replace('num mt-2 ">', `num mt-2" style="${slaUtTone(S.avgUt)}">`)}
-            ${kpi('Unit di bawah 85%', `${S.bawahTarget}<span class="text-sm font-semibold text-slate-400"> / ${S.unitData}</span>`, `unit berdata · ${S.unit} unit kontrak`, S.bawahTarget ? 'text-amber-600' : 'text-slate-900', '<i class="fa-solid fa-arrow-trend-down text-slate-400"></i>')}
+            ${kpi('Rata-rata utilisasi', slaPct(S.avgUt), S.nUt ? `${periodText} · ${S.unitUt} unit berdata` : 'belum diisi — isi lewat Input Availability', S.avgUt === null ? 'text-slate-400' : '', '<i class="fa-solid fa-gears text-slate-400"></i>', null, S.avgUt === null ? '' : slaUtTone(S.avgUt))}
+            ${kpi('Unit di bawah 85%', `${S.bawahTarget}<span class="text-sm font-semibold text-slate-400"> / ${S.unitData}</span>`, `unit berdata · ${S.unit} unit kontrak`, S.bawahTarget ? 'text-amber-600' : 'text-slate-900', '<i class="fa-solid fa-arrow-trend-down text-slate-400"></i>', 'bawah85')}
             ${kpi('Biaya dibayar', slaRpShort(S.biaya), `dari nilai penuh ${slaRpShort(S.penuh)}`, 'text-slate-900', '<i class="fa-solid fa-money-bill-wave text-slate-400"></i>')}
-            ${kpi('Potongan SLA', slaRpShort(S.potongan), `${slaPct(S.pctPotongan, 2)} dari nilai penuh`, S.potongan ? 'text-rose-700' : 'text-slate-900', '<i class="fa-solid fa-scissors text-slate-400"></i>')}
-            ${kpi('Tidak dibayar (0%)', `${S.tidakDibayar}`, S.nolSeri ? `${S.nolSeri} unit-bulan sudah 0% 2× beruntun` : `unit-bulan 0% ke-${SLA_ZERO_LIMIT} beruntun`, S.tidakDibayar ? 'text-rose-800' : 'text-slate-900', '<i class="fa-solid fa-ban text-slate-400"></i>')}
+            ${kpi('Ketidaktercapaian SLA', slaRpShort(S.potongan), `${slaPct(S.pctPotongan, 2)} dari nilai penuh`, S.potongan ? 'text-rose-700' : 'text-slate-900', '<i class="fa-solid fa-scissors text-slate-400"></i>', 'potongan')}
+            ${kpi('Unit > 2 bulan', `${S.unitNol3}<span class="text-sm font-semibold text-slate-400"> unit</span>`, `availability 0% ≥ ${SLA_ZERO_LIMIT} bulan berturut-turut · tidak dibayar`, S.unitNol3 ? 'text-rose-800' : 'text-slate-900', '<i class="fa-solid fa-ban text-slate-400"></i>', 'nol3')}
         </div>`;
+    const drillPanel = slaState.drill ? `<div class="card p-4 mb-3 sla-drill">${slaDrillPanel(units, y, months, periodText)}</div>` : '';
 
-    host.innerHTML = head + toolbar + kpis + `
+    host.innerHTML = head + toolbar + kpis + drillPanel + `
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-3">
             <div class="card p-4 ${branch === 'Semua' ? 'lg:col-span-3' : 'lg:col-span-5'} overflow-x-auto">${branch === 'Semua' ? slaAreaTable(y, months) : slaUnitTable(units, y, months)}</div>
             <div class="card p-4 ${branch === 'Semua' ? 'lg:col-span-2' : 'lg:col-span-5'}">
-                <p class="eyebrow mb-2">Biaya &amp; potongan per bulan · ${branch === 'Semua' ? 'seluruh terminal' : slaEsc(branch)} · ${y}</p>
+                <p class="eyebrow mb-2">Biaya dibayar &amp; ketidaktercapaian SLA per bulan · ${branch === 'Semua' ? 'seluruh terminal' : slaEsc(branch)} · ${y}</p>
                 <div style="height:${branch === 'Semua' ? 300 : 240}px"><canvas id="slaChart"></canvas></div>
             </div>
         </div>
@@ -271,7 +282,7 @@ function slaRender() {
             <summary class="font-bold text-slate-800 cursor-pointer">Aturan perhitungan SLA (sesuai kontrak)</summary>
             <ul class="mt-2 space-y-1 list-disc pl-5">
                 <li><b>Faktor bayar</b> per unit per bulan: ${slaBands.slice().reverse().map(b => `availability ≥ ${slaPct(b.batas, 0)} → ${slaPct(b.faktor, 0)}`).join(' · ')}.</li>
-                <li><b>Biaya dibayar</b> = harga unit per bulan × faktor bayar. <b>Potongan</b> = nilai penuh − biaya dibayar.</li>
+                <li><b>Biaya dibayar</b> = harga unit per bulan × faktor bayar. <b>Ketidaktercapaian SLA</b> = nilai penuh − biaya dibayar (selisih karena availability di bawah band 100%).</li>
                 <li><b>Availability 0%</b> tiga bulan berturut-turut: bulan ke-1 dan ke-2 tetap dibayar 50%, bulan ke-3 dan seterusnya <b>tidak dibayar</b> (faktor 0) sampai availability kembali di atas 0%.</li>
                 <li>Bulan yang belum diisi tidak ditagihkan dan tidak dihitung dalam rata-rata maupun nilai penuh.</li>
                 <li>Rata-rata availability = rata-rata sederhana seluruh unit-bulan yang berdata pada periode terpilih.</li>
@@ -280,6 +291,88 @@ function slaRender() {
         </details>`;
 
     slaDrawChart(units, y);
+}
+
+function slaSetDrill(d) {
+    slaState.drill = slaState.drill === d ? null : d;
+    slaRender();
+    if (slaState.drill) setTimeout(() => { const el = document.querySelector('#slaSection .sla-drill'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 30);
+}
+
+// Rangkaian bulan 0% berturut-turut yang memuat bulan (y,m): {awal, akhir, n}
+function slaZeroRun(unitId, y, m) {
+    let [sy, sm] = [y, m], n = 1, [py, pm] = slaPrev(y, m);
+    while (slaAvOf(unitId, py, pm) === 0) { [sy, sm] = [py, pm]; n++; [py, pm] = slaPrev(py, pm); }
+    let [ey, em] = [y, m], [ny, nm] = m === 12 ? [y + 1, 1] : [y, m + 1];
+    while (slaAvOf(unitId, ny, nm) === 0) { [ey, em] = [ny, nm]; n++; [ny, nm] = nm === 12 ? [ny + 1, 1] : [ny, nm + 1]; }
+    const after = slaAvOf(unitId, ny, nm);   // bulan setelah rangkaian: null = belum diisi, >0 = pulih
+    return { sy, sm, ey, em, n, after, ny, nm };
+}
+const slaYM = (y, m) => `${SLA_BULAN[m - 1]} ${y}`;
+
+function slaDrillPanel(units, y, months, periodText) {
+    const d = slaState.drill;
+    const scope = slaBranch() === 'Semua' ? 'seluruh terminal' : slaEsc(slaBranch());
+    const head = (icon, title, sub) => `
+        <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+            <div class="flex items-start gap-3">
+                <span class="w-9 h-9 rounded-lg bg-slate-900 text-amber-300 flex items-center justify-center"><i class="fa-solid ${icon}"></i></span>
+                <div><p class="font-extrabold text-slate-900 leading-tight">${title}</p><p class="text-[11px] text-slate-500">${sub}</p></div>
+            </div>
+            <button onclick="slaSetDrill('${d}')" class="text-[11px] font-semibold text-slate-500 hover:text-slate-900 cursor-pointer"><i class="fa-solid fa-xmark mr-1"></i>Tutup</button>
+        </div>`;
+    const nameCell = u => `<td class="px-2 py-2"><div class="font-semibold text-slate-800 leading-tight">${slaEsc(u.nama_unit)}</div>
+        <div class="text-[10.5px] text-slate-500"><span class="font-mono">${slaEsc(u.nomor_alat || '')}</span>${slaBranch() === 'Semua' ? ' · ' + slaEsc(u.terminal) : ''} · ${SLA_KAT_SHORT[slaKategori(u)] || ''}</div></td>`;
+    const strip = u => `<div class="flex gap-[3px]">${SLA_BULAN.map((b, i) => { const c = slaCell(u, y, i + 1);
+        return `<span class="w-[18px] h-[18px] rounded-[4px] ${months.includes(i + 1) ? 'ring-1 ring-slate-900/60' : ''}" style="${slaTone(c ? c.av : null, c ? c.faktor : 1)}" title="${b}: ${c ? slaPct(c.av, 1) + ' · bayar ' + slaPct(c.faktor, 0) : 'belum diisi'}"></span>`; }).join('')}</div>`;
+    const empty = t => `<div class="py-8 text-center text-sm text-slate-400"><i class="fa-regular fa-circle-check text-2xl text-emerald-500 block mb-2"></i>${t}</div>`;
+    const th = 'px-2 py-2 text-[10.5px] uppercase tracking-wider text-slate-500 font-semibold';
+
+    if (d === 'nol3') {
+        const list = [];
+        units.forEach(u => {
+            let unpaid = 0, last = null;
+            months.forEach(m => { const c = slaCell(u, y, m); if (c && c.faktor === 0) { unpaid += c.harga; last = m; } });
+            if (last) list.push({ u, unpaid, run: slaZeroRun(u.id, y, last) });
+        });
+        list.sort((a, b) => b.run.n - a.run.n || b.unpaid - a.unpaid);
+        const body = list.map(({ u, unpaid, run }) => {
+            const status = run.after === null ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">Masih 0%</span>'
+                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Pulih ${slaYM(run.ny, run.nm)} · ${slaPct(run.after, 0)}</span>`;
+            return `<tr class="hover:bg-slate-50">${nameCell(u)}
+                <td class="px-2 py-2 num whitespace-nowrap"><span class="font-bold text-rose-800">${run.n} bulan</span><div class="text-[10.5px] text-slate-500">${slaYM(run.sy, run.sm)} – ${slaYM(run.ey, run.em)}</div></td>
+                <td class="px-2 py-2">${strip(u)}</td>
+                <td class="px-2 py-2 text-center">${status}</td>
+                <td class="px-2 py-2 text-right num whitespace-nowrap font-semibold text-rose-700">${slaRp(unpaid)}</td></tr>`;
+        }).join('');
+        return head('fa-ban', `Unit dengan availability 0% lebih dari 2 bulan berturut-turut · ${list.length} unit`,
+            `${scope} · ${periodText} · bulan ke-1 & ke-2 tetap dibayar 50%, mulai bulan ke-3 tidak dibayar`)
+            + (list.length ? `<div class="overflow-x-auto"><table class="w-full text-xs"><thead class="border-b border-slate-200"><tr>
+                <th class="${th} text-left">Unit</th><th class="${th} text-left">Lama 0% berturut-turut</th><th class="${th} text-left">Availability ${y}</th><th class="${th}">Status</th><th class="${th} text-right">Tidak dibayar (periode)</th></tr></thead>
+                <tbody class="divide-y divide-slate-100">${body}</tbody></table></div>` : empty('Tidak ada unit dengan availability 0% lebih dari 2 bulan pada periode ini.'));
+    }
+
+    // potongan & bawah85: daftar unit yang tidak mencapai SLA
+    const rows = units.map(u => {
+        let b = 0, p = 0, sum = 0, n = 0, below = 0;
+        months.forEach(m => { const c = slaCell(u, y, m); if (!c) return; b += c.biaya; p += c.penuh; sum += c.av; n++; if (c.av < 0.85 - 1e-12) below++; });
+        return { u, biaya: b, penuh: p, pot: p - b, avg: n ? sum / n : null, n, below };
+    }).filter(r => d === 'potongan' ? r.pot > 0.5 : (r.avg !== null && r.avg < 0.85 - 1e-12))
+        .sort((a, b) => b.pot - a.pot || (a.avg ?? 1) - (b.avg ?? 1));
+    const tot = rows.reduce((s, r) => s + r.pot, 0);
+    const body = rows.map(r => `<tr class="hover:bg-slate-50">${nameCell(r.u)}
+        <td class="px-2 py-2 text-center num"><span class="px-1.5 py-0.5 rounded font-bold" style="${slaTone(r.avg, 1)}">${slaPct(r.avg)}</span></td>
+        <td class="px-2 py-2 text-center num">${r.below} / ${r.n}</td>
+        <td class="px-2 py-2">${strip(r.u)}</td>
+        <td class="px-2 py-2 text-right num whitespace-nowrap">${slaRp(r.penuh)}</td>
+        <td class="px-2 py-2 text-right num whitespace-nowrap font-semibold text-rose-700">${slaRp(r.pot)}</td>
+        <td class="px-2 py-2 text-right num whitespace-nowrap text-slate-500">${r.penuh ? slaPct(r.pot / r.penuh, 1) : '–'}</td></tr>`).join('');
+    const title = d === 'potongan' ? `Unit penyebab ketidaktercapaian SLA · ${rows.length} unit · ${slaRp(tot)}` : `Unit dengan rata-rata availability di bawah 85% · ${rows.length} unit`;
+    return head(d === 'potongan' ? 'fa-scissors' : 'fa-arrow-trend-down', title, `${scope} · ${periodText} · diurutkan dari nilai ketidaktercapaian terbesar`)
+        + (rows.length ? `<div class="overflow-x-auto max-h-[460px]"><table class="w-full text-xs"><thead class="border-b border-slate-200 sticky top-0 bg-white"><tr>
+            <th class="${th} text-left">Unit</th><th class="${th}">Rata-rata avail.</th><th class="${th}">Bulan &lt; 85%</th><th class="${th} text-left">Availability ${y}</th>
+            <th class="${th} text-right">Nilai penuh</th><th class="${th} text-right">Ketidaktercapaian</th><th class="${th} text-right">%</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">${body}</tbody></table></div>` : empty('Semua unit mencapai SLA pada periode ini.'));
 }
 
 function slaAreaTable(y, months) {
@@ -301,7 +394,7 @@ function slaAreaTable(y, months) {
         <table class="w-full text-xs border-collapse">
             <thead class="text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr><th class="px-2 py-2 text-left">Area</th><th class="px-2 py-2">Unit berdata</th><th class="px-2 py-2">Avail.</th><th class="px-2 py-2">Util.</th><th class="px-2 py-2">&lt; 85%</th>
-                    <th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Potongan</th><th class="px-2 py-2 text-right">%</th></tr>
+                    <th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Tdk tercapai</th><th class="px-2 py-2 text-right">%</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">${rows.map(r => tr(r.t, r.s, true)).join('')}${tr('Total', tot, false, true)}</tbody>
         </table>`;
@@ -336,7 +429,7 @@ function slaKategoriCard(units, y, months) {
         <div class="overflow-x-auto"><table class="w-full text-xs border-collapse">
             <thead class="text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr><th class="px-2 py-2 text-left">Kategori</th><th class="px-2 py-2 text-left">Rata-rata availability &amp; utilisasi</th><th class="px-2 py-2 text-left">Selisih</th>
-<th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Potongan</th></tr>
+<th class="px-2 py-2 text-right">Dibayar</th><th class="px-2 py-2 text-right">Ketidaktercapaian SLA</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100">${rows.map(r => tr(r.k, r.s, SLA_KAT_COLOR[r.k], false)).join('')}${tr('Rata-rata semua kategori', tot, '#0f172a', true)}</tbody>
         </table></div>`;
@@ -435,7 +528,7 @@ function slaUnitTable(units, y, months) {
         <div class="overflow-auto max-h-[560px]">
         <table class="w-full sla-grid">
             <thead class="sticky top-0 bg-white z-10"><tr><th class="w-6 text-left text-[10.5px] text-slate-400 font-semibold">No</th><th class="text-left text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider">Unit kontrak</th>${slaMonthHeads(months)}
-                <th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Dibayar*</th><th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Potongan*</th></tr></thead>
+                <th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Dibayar*</th><th class="text-right text-[10.5px] text-slate-400 font-semibold uppercase tracking-wider px-2">Tdk tercapai*</th></tr></thead>
             <tbody>${rows}</tbody>
         </table></div>
         <p class="text-[10.5px] text-slate-400 mt-2">* untuk periode terpilih (bulan bertanda gelap).${edit ? ' Klik kotak bulan untuk mengedit availability &amp; utilisasi unit tersebut.' : ' Arahkan kursor ke kotak bulan untuk faktor bayar.'}</p>`;
@@ -468,7 +561,7 @@ function slaEnsureCellModal() {
                 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 grid grid-cols-3 gap-2 text-center">
                     <div><p class="eyebrow !text-[9.5px]">Faktor bayar</p><p id="slaCeF" class="font-extrabold text-slate-900 num mt-0.5">–</p></div>
                     <div><p class="eyebrow !text-[9.5px]">Dibayar</p><p id="slaCeB" class="font-extrabold text-slate-900 num mt-0.5">–</p></div>
-                    <div><p class="eyebrow !text-[9.5px]">Potongan</p><p id="slaCeP" class="font-extrabold text-rose-700 num mt-0.5">–</p></div>
+                    <div><p class="eyebrow !text-[9.5px]">Tdk tercapai</p><p id="slaCeP" class="font-extrabold text-rose-700 num mt-0.5">–</p></div>
                 </div>
                 <p id="slaCeNote" class="text-[11px] text-slate-500"></p>
             </div>
@@ -564,6 +657,9 @@ function slaCellDelete() {
     .sla-bar.\\!static { position: relative; left: auto; right: auto; bottom: auto; height: 4px; }
     .sla-bar i { display: block; height: 100%; background: #0d9488; border-radius: 3px; }
     .sla-cell-edit { cursor: pointer; }
+    .sla-kpi-click { cursor: pointer; transition: box-shadow .15s, transform .15s; }
+    .sla-kpi-click:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -8px rgba(15,23,42,.25); }
+    .sla-kpi-on { box-shadow: 0 0 0 2px #1d4ed8 !important; }
     .sla-cell-edit:hover { box-shadow: 0 0 0 2px #2563eb inset; transform: translateY(-1px); }
     .sla-row > td:first-child, .sla-row > td:nth-child(2) { padding-top: 2px; padding-bottom: 2px; }
     tr.sla-row:hover > td.sla-cell { filter: saturate(1.15); }
@@ -583,7 +679,7 @@ function slaDrawChart(units, y) {
             labels: SLA_BULAN,
             datasets: [
                 { type: 'bar', label: 'Dibayar (Rp juta)', data: per.map(s => jt(s.biaya)), backgroundColor: '#1e3a8a', stack: 'b', yAxisID: 'y', borderRadius: 3 },
-                { type: 'bar', label: 'Potongan (Rp juta)', data: per.map(s => jt(s.potongan)), backgroundColor: '#e11d48', stack: 'b', yAxisID: 'y', borderRadius: 3 },
+                { type: 'bar', label: 'Ketidaktercapaian SLA (Rp juta)', data: per.map(s => jt(s.potongan)), backgroundColor: '#e11d48', stack: 'b', yAxisID: 'y', borderRadius: 3 },
                 { type: 'line', label: 'Availability', data: per.map(s => s.avgAv === null ? null : Math.round(s.avgAv * 1000) / 10), borderColor: '#f59e0b', backgroundColor: '#f59e0b', yAxisID: 'y2', tension: .3, pointRadius: 3, spanGaps: false },
                 { type: 'line', label: 'Utilisasi', data: per.map(s => s.avgUt === null ? null : Math.round(s.avgUt * 1000) / 10), borderColor: '#0d9488', backgroundColor: '#0d9488', borderDash: [5, 4], yAxisID: 'y2', tension: .3, pointRadius: 3, spanGaps: false }
             ]
@@ -749,7 +845,7 @@ function slaPreviewInput() {
         tot += h * f; full += h; n++;
         cell.innerHTML = `<span class="px-1 rounded" style="${slaTone(av.value, f)}">${slaPct(f, 0)}</span> ${slaRpShort(h * f)}`;
     });
-    document.getElementById('slaInTotal').textContent = n ? `${n} unit diisi · dibayar ${slaRp(tot)} · potongan ${slaRp(full - tot)}` : 'Belum ada isian';
+    document.getElementById('slaInTotal').textContent = n ? `${n} unit diisi · dibayar ${slaRp(tot)} · ketidaktercapaian ${slaRp(full - tot)}` : 'Belum ada isian';
 }
 
 async function slaSaveInput() {
@@ -887,7 +983,7 @@ function slaBuildSheet(wb, y, units) {
     const rekapGroup = (top, title, firstLabel, names, keyCol, keyOf) => {
         secHead(top, title);
         const h = top + 1, first = top + 2, totR = first + names.length;
-        [firstLabel, 'Jumlah unit', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit < 85%', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(h, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
+        [firstLabel, 'Jumlah unit', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit < 85%', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Ketidaktercapaian SLA (Rp)', '% ketidaktercapaian'].forEach((t, i) => hdr(h, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
         ws.getRow(h).height = 30;
         names.forEach((n, i) => {
             const r = first + i, cs = calc.filter(x => keyOf(x) === n), zebra = i % 2 ? ZEBRA : undefined;
@@ -920,7 +1016,7 @@ function slaBuildSheet(wb, y, units) {
 
     // D. Rekap per bulan
     secHead(bulanTop, `D. Rekap per bulan — Tahun ${y} (availability & utilisasi bersanding)`);
-    ['Bulan', 'Unit berdata', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit-bulan tidak dibayar', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Potongan (Rp)', '% potongan'].forEach((t, i) => hdr(bulanHdr, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
+    ['Bulan', 'Unit berdata', 'Rata-rata availability', 'Rata-rata utilisasi', 'Unit-bulan tidak dibayar', 'Nilai penuh (Rp)', 'Biaya dibayar (Rp)', 'Ketidaktercapaian SLA (Rp)', '% ketidaktercapaian'].forEach((t, i) => hdr(bulanHdr, 2 + i, t, i === 3 ? { fill: 'FF0F766E' } : {}));
     ws.getRow(bulanHdr).height = 30;
     SLA_BULAN_PANJANG.forEach((b, i) => {
         const r = bulanFirst + i, av = L(C.av1 + i), ut = L(C.u1 + i), f = L(C.f1 + i), bi = L(C.b1 + i);
@@ -961,7 +1057,7 @@ function slaBuildSheet(wb, y, units) {
         ws.mergeCells(detHdr1, c0, detHdr1, c0 + 11); hdr(detHdr1, c0, t, { fill: col });
         SLA_BULAN.forEach((b, i) => hdr(detHdr2, c0 + i, b, { fill: col }));
     });
-    [[C.penuh, 'Nilai penuh (Rp)'], [C.biaya, 'Total dibayar (Rp)'], [C.pot, 'Potongan (Rp)'], [C.rata, 'Rata-rata avail.'], [C.rataUt, 'Rata-rata util.']].forEach(([c, t]) => { ws.mergeCells(detHdr1, c, detHdr2, c); hdr(detHdr1, c, t, { fill: NAVY }); });
+    [[C.penuh, 'Nilai penuh (Rp)'], [C.biaya, 'Total dibayar (Rp)'], [C.pot, 'Ketidaktercapaian SLA (Rp)'], [C.rata, 'Rata-rata avail.'], [C.rataUt, 'Rata-rata util.']].forEach(([c, t]) => { ws.mergeCells(detHdr1, c, detHdr2, c); hdr(detHdr1, c, t, { fill: NAVY }); });
 
     calc.forEach((x, i) => {
         const r = d0 + i, u = x.u, zebra = i % 2 ? ZEBRA : undefined;
@@ -998,4 +1094,281 @@ function slaBuildSheet(wb, y, units) {
     ws.getRow(detHdr1).height = 18; ws.getRow(detHdr2).height = 18;
     ws.pageSetup = { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
     return { ws, d0, d1, C, areaFirst, areaTot, katFirst, katTot, bulanFirst, bulanTot };
+}
+
+
+// =====================================================================
+// Upload Excel SIGAP (Report Performance) → availability & utilisasi
+// Kolom yang dibaca (dicari dari judul kolom, urutan bebas):
+//   Site · Code Alat · Nama Alat · Availability Contract · Utilisasi
+// Laporan SIGAP tidak memuat bulan, jadi bulan & tahun dipilih saat upload.
+// =====================================================================
+const SLA_JENIS_ALIAS = { FOD: 'FLT', SLD: 'SIL', RMG: 'RMGC' };
+let slaUp = null;   // status upload yang sedang dipratinjau
+
+// Kunci pencocokan dari teks kode/nama alat, contoh '009-010-QCC-01' → 'QCC-1', 'EX-010-RTG-03' → 'EX RTG-3'
+function slaCodeKey(str) {
+    const t = String(str || '').toUpperCase();
+    const m = t.match(/(?<![A-Z])(QCC|GLC|GJC|FJC|RTG|RMGC|RMG|RST|SIL|SLD|FLT|FOD|HDT|TTR)(?![A-Z])[-\s.]*0*(\d{1,4})/);
+    if (!m) return null;
+    const ex = /(^|[^A-Z])EX[-\s]/.test(t);
+    return (ex ? 'EX ' : '') + (SLA_JENIS_ALIAS[m[1]] || m[1]) + '-' + parseInt(m[2], 10);
+}
+const slaNormKode = k => String(k || '').trim().toUpperCase().replace(/\s+/g, ' ');
+
+function slaParsePctCell(v) {
+    if (v === null || v === undefined || v === '') return null;
+    if (typeof v === 'number') return v <= 1.0000001 ? v : v / 100;
+    let t = String(v).trim();
+    if (!t || /^(-|n\/?a|no\s*bd)$/i.test(t)) return null;
+    const hasPct = t.includes('%');
+    t = t.replace('%', '').replace(/\s/g, '');
+    if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, '');
+    t = t.replace(',', '.');
+    const n = Number(t);
+    if (!isFinite(n)) return undefined;              // tidak terbaca
+    const f = hasPct || n > 1.0000001 ? n / 100 : n;
+    return f < -1e-9 || f > 1.0000001 ? undefined : Math.round(Math.min(1, Math.max(0, f)) * 10000) / 10000;
+}
+
+async function slaReadExcelRows(file) {
+    const ExcelJS = await loadExcelJS();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(await file.arrayBuffer());
+    const cellVal = c => {
+        let v = c.value;
+        if (v && typeof v === 'object') {
+            if (v.result !== undefined) v = v.result;
+            else if (v.richText) v = v.richText.map(x => x.text).join('');
+            else if (v.text !== undefined) v = v.text;
+            else if (v instanceof Date) v = v.toISOString();
+        }
+        return v;
+    };
+    // pakai sheet pertama yang punya kolom "Code Alat"/"Kode Alat"
+    for (const ws of wb.worksheets) {
+        const rows = [];
+        ws.eachRow({ includeEmpty: false }, row => {
+            const arr = []; row.eachCell({ includeEmpty: true }, (c, col) => { arr[col - 1] = cellVal(c); }); rows.push(arr);
+        });
+        if (rows.some(r => r.some(v => /^(code|kode)\s*alat$/i.test(String(v ?? '').trim())))) return rows;
+    }
+    throw new Error('Kolom "Code Alat" tidak ditemukan. Pastikan file adalah Report Performance dari SIGAP (.xlsx).');
+}
+
+// Ubah baris mentah Excel menjadi daftar pratinjau dengan usulan unit kontrak.
+function slaBuildUpload(rows, fallbackTerminal) {
+    const hi = rows.findIndex(r => r.some(v => /^(code|kode)\s*alat$/i.test(String(v ?? '').trim())));
+    if (hi < 0) throw new Error('Kolom "Code Alat" tidak ditemukan.');
+    const H = rows[hi].map(v => String(v ?? '').trim().toLowerCase());
+    const col = re => H.findIndex(h => re.test(h));
+    const cKode = col(/^(code|kode)\s*alat$/), cNama = col(/^nama\s*alat/), cSite = col(/^site|^cabang|^terminal/);
+    const cAv = (() => { const a = col(/availability\s*contract/); return a >= 0 ? a : col(/availab/); })();
+    const cUt = col(/utili[sz]a/);
+    if (cAv < 0) throw new Error('Kolom "Availability" tidak ditemukan.');
+
+    // indeks kunci per terminal
+    const idx = new Map();
+    slaUnits.forEach(u => {
+        new Set([slaCodeKey(u.nomor_alat), slaCodeKey(u.nama_unit)].filter(Boolean)).forEach(k => {
+            const key = u.terminal + '|' + k; if (!idx.has(key)) idx.set(key, []); idx.get(key).push(u.id);
+        });
+    });
+    const terminalOf = site => TERMINALS.find(t => String(site || '').toUpperCase().includes(t.toUpperCase())) || null;
+
+    const items = [];
+    for (let i = hi + 1; i < rows.length; i++) {
+        const r = rows[i] || [];
+        const kode = slaNormKode(r[cKode]);
+        if (!kode) continue;
+        const nama = cNama >= 0 ? String(r[cNama] ?? '').trim() : '';
+        const site = cSite >= 0 ? String(r[cSite] ?? '').trim() : '';
+        const terminal = terminalOf(site) || fallbackTerminal || null;
+        const av = slaParsePctCell(r[cAv]), ut = cUt >= 0 ? slaParsePctCell(r[cUt]) : null;
+        const key = slaCodeKey(kode) || slaCodeKey(nama);
+        let unitId = null, how = '', candidates = [];
+        if (slaSigapMap.has(kode)) { unitId = slaSigapMap.get(kode); how = 'tersimpan'; }
+        else if (key && terminal) {
+            candidates = idx.get(terminal + '|' + key) || [];
+            if (candidates.length === 1) { unitId = candidates[0]; how = 'otomatis'; }
+        }
+        items.push({ row: i + 1, kode, nama, site, terminal, av, ut, key, unitId, how, candidates, mapped0: unitId });
+    }
+    return items;
+}
+
+function slaUploadStatus(it, dupIds) {
+    if (!it.unitId) {
+        if (it.how === 'abaikan') return ['Diabaikan', 'bg-slate-100 text-slate-500'];
+        if (it.candidates.length > 1) return ['Pilih unit', 'bg-amber-100 text-amber-800'];
+        return [it.key ? 'Tidak ada di kontrak' : 'Bukan unit kontrak', 'bg-slate-100 text-slate-500'];
+    }
+    if (it.av === undefined || it.ut === undefined) return ['Angka tidak terbaca', 'bg-rose-100 text-rose-700'];
+    if (dupIds.has(it.unitId)) return ['Duplikat', 'bg-rose-100 text-rose-700'];
+    if (it.av === null && it.ut === null) return ['Kosong', 'bg-slate-100 text-slate-500'];
+    return [it.how === 'manual' ? 'Dipilih manual' : it.how === 'tersimpan' ? 'Cocok (tersimpan)' : 'Cocok otomatis', 'bg-emerald-100 text-emerald-800'];
+}
+
+function slaEnsureUploadModal() {
+    if (document.getElementById('slaUpModal')) return;
+    const div = document.createElement('div');
+    div.id = 'slaUpModal';
+    div.className = 'fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 hidden items-center justify-center p-3';
+    const lastMonth = new Date(); lastMonth.setDate(1); lastMonth.setMonth(lastMonth.getMonth() - 1);
+    div.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden">
+            <div class="px-5 py-4 bg-slate-900 text-white flex items-start justify-between gap-3">
+                <div><p class="text-[10.5px] font-bold tracking-wider uppercase text-amber-300">Availability &amp; Utilisasi</p>
+                    <h3 class="font-extrabold">Upload Excel Report Performance SIGAP</h3>
+                    <p class="text-[11px] text-slate-400">Kolom yang dibaca: Site · Code Alat · Nama Alat · Availability Contract · Utilisasi. Data lain di file diabaikan.</p></div>
+                <button onclick="slaCloseUpload()" class="text-slate-400 hover:text-white cursor-pointer text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-12 gap-3 border-b border-slate-100 bg-slate-50/70 items-end">
+                <label id="slaUpDrop" class="md:col-span-6 flex items-center gap-3 border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white rounded-xl px-4 py-3 cursor-pointer transition">
+                    <span class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center text-lg"><i class="fa-solid fa-file-excel"></i></span>
+                    <span class="min-w-0"><span id="slaUpFileName" class="block text-sm font-bold text-slate-800 truncate">Pilih atau tarik file .xlsx ke sini</span>
+                        <span class="block text-[11px] text-slate-500">Report Performance dari SIGAP, satu bulan per file</span></span>
+                    <input id="slaUpFile" type="file" accept=".xlsx" class="hidden" onchange="slaUploadFileChosen(this.files[0])">
+                </label>
+                <div class="md:col-span-2"><label class="field-label" for="slaUpBulan">Bulan data</label>
+                    <select id="slaUpBulan" class="field" onchange="slaUploadRender()">${SLA_BULAN_PANJANG.map((b, i) => `<option value="${i + 1}" ${i === lastMonth.getMonth() ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
+                <div class="md:col-span-2"><label class="field-label" for="slaUpTahun">Tahun</label>
+                    <input id="slaUpTahun" type="number" min="2000" max="2100" value="${lastMonth.getFullYear()}" class="field num" onchange="slaUploadRender()"></div>
+                <div class="md:col-span-2"><label class="field-label" for="slaUpTerminal">Terminal</label>
+                    <select id="slaUpTerminal" class="field" onchange="slaUploadReparse()"><option value="">Otomatis (kolom Site)</option>${TERMINALS.map(t => `<option>${t}</option>`).join('')}</select></div>
+            </div>
+            <div id="slaUpSummary" class="px-5 pt-3 flex flex-wrap gap-2 text-[11px]"></div>
+            <div class="overflow-auto flex-1 px-5 py-2">
+                <div id="slaUpEmpty" class="py-14 text-center text-slate-400 text-sm"><i class="fa-regular fa-file-excel text-3xl mb-2 block"></i>Belum ada file. Pilih file Report Performance SIGAP untuk melihat pratinjau sebelum disimpan.</div>
+                <table id="slaUpTable" class="w-full text-xs hidden">
+                    <thead class="sticky top-0 bg-white text-[10.5px] uppercase tracking-wider text-slate-500 border-b border-slate-200 z-10">
+                        <tr><th class="py-2 text-left w-10">No</th><th class="py-2 text-left">Alat di SIGAP</th><th class="py-2 text-left w-[34%]">Unit kontrak SIMALAT</th>
+                            <th class="py-2 text-right">Availability</th><th class="py-2 text-right">Utilisasi</th><th class="py-2 text-right">Data lama</th><th class="py-2 text-center">Status</th></tr>
+                    </thead>
+                    <tbody id="slaUpRows" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
+                <label class="inline-flex items-center gap-2 text-[11px] text-slate-600"><input id="slaUpRemember" type="checkbox" checked class="rounded"> Ingat pasangan kode SIGAP ↔ unit kontrak untuk upload berikutnya</label>
+                <div class="ml-auto flex gap-2">
+                    <button onclick="slaCloseUpload()" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">Batal</button>
+                    <button id="slaUpSave" onclick="slaUploadSave()" disabled class="px-5 py-2 text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 disabled:cursor-not-allowed rounded-lg cursor-pointer"><i class="fa-solid fa-floppy-disk mr-1"></i>Simpan</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(div);
+    const drop = document.getElementById('slaUpDrop');
+    ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('!border-blue-500', '!bg-blue-50'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('!border-blue-500', '!bg-blue-50'); }));
+    drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) slaUploadFileChosen(f); });
+}
+
+function slaOpenUpload() {
+    if (!slaCanEdit()) return;
+    slaEnsureUploadModal();
+    slaUp = null;
+    document.getElementById('slaUpFile').value = '';
+    document.getElementById('slaUpFileName').textContent = 'Pilih atau tarik file .xlsx ke sini';
+    document.getElementById('slaUpRemember').parentElement.style.display = slaSigapMapOk ? '' : 'none';
+    slaUploadRender();
+    const m = document.getElementById('slaUpModal'); m.classList.remove('hidden'); m.style.display = 'flex';
+}
+function slaCloseUpload() { const m = document.getElementById('slaUpModal'); if (m) { m.classList.add('hidden'); m.style.display = 'none'; } }
+
+async function slaUploadFileChosen(file) {
+    if (!file) return;
+    document.getElementById('slaUpFileName').textContent = file.name;
+    try {
+        const rows = await slaReadExcelRows(file);
+        slaUploadSetRows(rows, file.name);
+    } catch (e) {
+        console.error(e); slaUp = null; slaUploadRender();
+        alert('File tidak dapat dibaca: ' + (e.message || e));
+    }
+}
+// dipisah agar bisa diuji tanpa file
+function slaUploadSetRows(rows, name) {
+    slaUp = { rows, name, items: slaBuildUpload(rows, document.getElementById('slaUpTerminal').value || null) };
+    slaUploadRender();
+}
+function slaUploadReparse() { if (slaUp) slaUploadSetRows(slaUp.rows, slaUp.name); }
+
+function slaUploadPick(i, val) {
+    const it = slaUp.items[i];
+    it.unitId = val ? +val : null; it.how = val ? 'manual' : 'abaikan';
+    slaUploadRender();
+}
+
+function slaUploadRender() {
+    const tbl = document.getElementById('slaUpTable'), empty = document.getElementById('slaUpEmpty'), sum = document.getElementById('slaUpSummary'), btn = document.getElementById('slaUpSave');
+    if (!slaUp) { tbl.classList.add('hidden'); empty.classList.remove('hidden'); sum.innerHTML = ''; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>Simpan'; return; }
+    tbl.classList.remove('hidden'); empty.classList.add('hidden');
+    const y = +document.getElementById('slaUpTahun').value, m = +document.getElementById('slaUpBulan').value;
+    const count = new Map(); slaUp.items.forEach(it => { if (it.unitId) count.set(it.unitId, (count.get(it.unitId) || 0) + 1); });
+    const dup = new Set([...count].filter(([, n]) => n > 1).map(([id]) => id));
+    const used = new Set(count.keys());
+    let ok = 0, pick = 0, skip = 0, bad = 0, timpa = 0;
+    document.getElementById('slaUpRows').innerHTML = slaUp.items.map((it, i) => {
+        const [label, cls] = slaUploadStatus(it, dup);
+        if (cls.includes('emerald')) ok++; else if (label === 'Pilih unit') pick++; else if (cls.includes('rose')) bad++; else skip++;
+        const pool = slaUnits.filter(u => !it.terminal || u.terminal === it.terminal);
+        const opts = `<option value="">— abaikan baris ini —</option>` + pool.map(u => {
+            const hint = it.candidates.includes(u.id) ? '★ ' : (used.has(u.id) && u.id !== it.unitId ? '· ' : '');
+            return `<option value="${u.id}" ${u.id === it.unitId ? 'selected' : ''}>${hint}${slaEsc(u.nama_unit)}${u.nomor_alat ? ' — ' + slaEsc(u.nomor_alat) : ''}</option>`;
+        }).join('');
+        const old = it.unitId ? slaAv.get(slaKey(it.unitId, y, m)) : null;
+        if (old && cls.includes('emerald')) timpa++;
+        const pct = v => v === undefined ? '<span class="text-rose-600 font-semibold">?</span>' : v === null ? '<span class="text-slate-300">–</span>' : slaPct(v, 2);
+        const dim = !it.unitId ? 'opacity-60' : '';
+        return `<tr class="${dim}">
+            <td class="py-1.5 text-slate-400 num">${it.row}</td>
+            <td class="py-1.5 pr-2"><div class="font-mono text-[11px] font-semibold text-slate-800">${slaEsc(it.kode)}</div><div class="text-[10.5px] text-slate-500 truncate max-w-[260px]">${slaEsc(it.nama)}${it.terminal ? ' · ' + slaEsc(it.terminal) : ' · <span class=\'text-rose-600\'>terminal?</span>'}</div></td>
+            <td class="py-1.5 pr-2"><select class="control w-full !py-1 text-[11px]" onchange="slaUploadPick(${i}, this.value)">${opts}</select></td>
+            <td class="py-1.5 text-right num font-semibold">${pct(it.av)}</td>
+            <td class="py-1.5 text-right num" style="color:#0f766e">${pct(it.ut)}</td>
+            <td class="py-1.5 text-right num text-[10.5px] text-slate-500">${old ? `${slaPct(old.availability, 1)}${old.utilisasi !== null ? ' · U ' + slaPct(old.utilisasi, 1) : ''}` : '–'}</td>
+            <td class="py-1.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap ${cls}">${label}</span></td>
+        </tr>`;
+    }).join('');
+    const chip = (n, t, c) => `<span class="px-2.5 py-1 rounded-full font-semibold ${c}">${n} ${t}</span>`;
+    const terms = [...new Set(slaUp.items.filter(it => it.unitId).map(it => slaUnits.find(u => u.id === it.unitId)?.terminal))].filter(Boolean);
+    const missing = slaUnits.filter(u => terms.includes(u.terminal) && u.aktif !== false && !used.has(u.id)).length;
+    sum.innerHTML = chip(slaUp.items.length, 'baris di file', 'bg-slate-100 text-slate-700') + chip(ok, 'siap disimpan', 'bg-emerald-100 text-emerald-800')
+        + (pick ? chip(pick, 'perlu dipilih', 'bg-amber-100 text-amber-800') : '') + (bad ? chip(bad, 'bermasalah', 'bg-rose-100 text-rose-700') : '')
+        + (skip ? chip(skip, 'diabaikan (bukan unit kontrak)', 'bg-slate-100 text-slate-500') : '')
+        + (timpa ? chip(timpa, `menimpa data ${SLA_BULAN[m - 1]} ${y}`, 'bg-blue-50 text-blue-700') : '')
+        + (missing ? chip(missing, `unit kontrak ${terms.join(', ')} tidak ada di file`, 'bg-white border border-slate-200 text-slate-500') : '');
+    btn.disabled = !ok || bad > 0;
+    btn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1"></i>Simpan ${ok} unit ke ${SLA_BULAN_PANJANG[m - 1]} ${y}`;
+    btn.title = bad ? 'Perbaiki baris bermasalah (duplikat / angka tidak terbaca) atau pilih "abaikan".' : '';
+}
+
+async function slaUploadSave() {
+    if (!slaUp) return;
+    const y = +document.getElementById('slaUpTahun').value, m = +document.getElementById('slaUpBulan').value;
+    const count = new Map(); slaUp.items.forEach(it => { if (it.unitId) count.set(it.unitId, (count.get(it.unitId) || 0) + 1); });
+    const dup = new Set([...count].filter(([, n]) => n > 1).map(([id]) => id));
+    const good = slaUp.items.filter(it => slaUploadStatus(it, dup)[1].includes('emerald'));
+    if (!good.length) return;
+    const timpa = good.filter(it => slaAv.has(slaKey(it.unitId, y, m))).length;
+    if (!confirm(`Simpan availability & utilisasi ${good.length} unit untuk ${SLA_BULAN_PANJANG[m - 1]} ${y}?` + (timpa ? `\n${timpa} unit sudah punya data bulan ini dan akan ditimpa.` : ''))) return;
+    const btn = document.getElementById('slaUpSave'), orig = btn.innerHTML;
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Menyimpan…';
+    try {
+        const payload = good.map(it => ({ unit_id: it.unitId, tahun: y, bulan: m, availability: it.av, utilisasi: it.ut }));
+        const { error } = await supabaseClient.from('availability_bulanan').upsert(payload, { onConflict: 'unit_id,tahun,bulan' });
+        if (error) throw error;
+        if (slaSigapMapOk && document.getElementById('slaUpRemember').checked) {
+            const maps = good.filter(it => it.how === 'manual' || (it.how === 'otomatis' && !slaSigapMap.has(it.kode))).map(it => ({ kode: it.kode, unit_id: it.unitId }));
+            if (maps.length) {
+                const { error: e2 } = await supabaseClient.from('kode_sigap_map').upsert(maps, { onConflict: 'kode' });
+                if (e2) console.warn('Pasangan kode tidak tersimpan:', e2.message);
+            }
+        }
+        slaState.tahun = y; slaState.bulan = m; slaState.mode = 'bulan';
+        slaCloseUpload();
+        await slaLoad();
+    } catch (e) {
+        alert('Gagal menyimpan: ' + (e.message || e));
+    } finally { btn.disabled = false; btn.innerHTML = orig; }
 }
