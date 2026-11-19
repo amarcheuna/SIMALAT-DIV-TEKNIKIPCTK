@@ -385,6 +385,7 @@
                                     <th class="px-3 py-3">Jenis</th>
                                     <th class="px-3 py-3">Nomor Alat</th>
                                     <th class="px-3 py-3">Brand</th>
+                                    <th class="px-3 py-3">Milik</th>
                                     <th class="px-3 py-3 text-center">Tahun</th>
                                     <th class="px-3 py-3 text-center">Usia (th)</th>
                                     <th class="px-3 py-3">Energi</th>
@@ -489,8 +490,8 @@
                 </div>
 
                 <div>
-                    <p class="eyebrow mb-2">Kondisi &amp; energi</p>
-                    <div class="grid grid-cols-2 gap-3">
+                    <p class="eyebrow mb-2">Kondisi, energi &amp; kepemilikan</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="field-label" for="inStatus">Status kesiapan</label>
                             <select id="inStatus" class="field">
@@ -507,6 +508,16 @@
                                 <option value="Hybrid">Hybrid</option>
                                 <option value="Belum Diisi">Belum Diisi</option>
                                 <option value="Non-Engine">Non-Engine</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label" for="inMilik">Milik</label>
+                            <select id="inMilik" class="field">
+                                <option value="IPC TPK">IPC TPK</option>
+                                <option value="Pelindo">Pelindo</option>
+                                <option value="Mitra">Mitra</option>
+                                <option value="Sewa">Sewa</option>
+                                <option value="Belum Diisi">Belum Diisi</option>
                             </select>
                         </div>
                     </div>
