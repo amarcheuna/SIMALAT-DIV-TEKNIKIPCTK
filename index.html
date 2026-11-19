@@ -512,13 +512,8 @@
                         </div>
                         <div>
                             <label class="field-label" for="inMilik">Milik</label>
-                            <select id="inMilik" class="field">
-                                <option value="IPC TPK">IPC TPK</option>
-                                <option value="Pelindo">Pelindo</option>
-                                <option value="Mitra">Mitra</option>
-                                <option value="Sewa">Sewa</option>
-                                <option value="Belum Diisi">Belum Diisi</option>
-                            </select>
+                            <input type="text" id="inMilik" list="milikList" maxlength="60" placeholder="Ketik, mis. IPC TPK" class="field" autocomplete="off">
+                            <datalist id="milikList"></datalist>
                         </div>
                     </div>
                 </div>
