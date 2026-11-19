@@ -689,24 +689,31 @@ function renderTable() {
 }
 
 // ---------- Kepemilikan alat ----------
-const MILIK_OPTIONS = ['IPC TPK', 'Pelindo', 'Mitra', 'Sewa'];
+const MILIK_OPTIONS = ['IPC TPK'];   // saran awal; isian bebas diketik manual
 function milikOf(d) { return d && d.kepemilikan && d.kepemilikan !== '-' ? d.kepemilikan : 'Belum Diisi'; }
 function milikBadge(v) {
     const m = milikOf({ kepemilikan: v });
-    const cls = { 'IPC TPK': 'bg-blue-50 text-blue-800', 'Pelindo': 'bg-indigo-50 text-indigo-700', 'Mitra': 'bg-teal-50 text-teal-700', 'Sewa': 'bg-amber-50 text-amber-800' }[m] || 'bg-slate-100 text-slate-500';
-    return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${cls}">${m}</span>`;
+    const cls = m === 'Belum Diisi' ? 'bg-slate-100 text-slate-400' : /ipc\s*tpk/i.test(m) ? 'bg-blue-50 text-blue-800' : 'bg-teal-50 text-teal-800';
+    const safe = String(m).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${cls}">${safe}</span>`;
 }
 function setMilikInput(v) {
-    const sel = document.getElementById('inMilik');
-    if (!sel) return;
-    const m = milikOf({ kepemilikan: v });
-    if (![...sel.options].some(o => o.value === m)) sel.add(new Option(m, m), sel.options.length - 1);   // nilai lama di luar daftar tetap tampil
-    sel.value = m;
+    const el = document.getElementById('inMilik');
+    if (!el) return;
+    el.value = v && v !== '-' ? v : '';
+    // saran isian = nilai yang sudah pernah dipakai di database (tetap bisa diketik bebas)
+    const dl = document.getElementById('milikList');
+    if (dl) {
+        const used = [...new Set((rawData || []).map(d => (d.kepemilikan || '').trim()).filter(x => x && x !== '-'))];
+        const all = [...new Set([...used, ...MILIK_OPTIONS])].sort((x, y) => x.localeCompare(y, 'id'));
+        dl.innerHTML = all.map(x => `<option value="${String(x).replace(/"/g, '&quot;')}"></option>`).join('');
+    }
 }
 function readMilikInput() {
-    const sel = document.getElementById('inMilik');
-    if (!sel) return {};
-    return { kepemilikan: sel.value === 'Belum Diisi' ? null : sel.value };
+    const el = document.getElementById('inMilik');
+    if (!el) return {};
+    const v = el.value.trim().replace(/\s+/g, ' ');
+    return { kepemilikan: v === '' || /^belum diisi$/i.test(v) ? null : v };
 }
 
 function openModal() {
@@ -716,7 +723,7 @@ function openModal() {
     document.getElementById('inBrand').value = '';
     document.getElementById('inTahun').value = '';
     document.getElementById('inEnergi').value = 'BBM';
-    setMilikInput('IPC TPK');
+    setMilikInput('');
     setSpecInputs({});
     document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
     document.getElementById('modalForm').classList.remove('hidden');
