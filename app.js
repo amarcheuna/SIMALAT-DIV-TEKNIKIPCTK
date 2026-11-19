@@ -632,6 +632,7 @@ function renderTable() {
             const match = (item.nomor_alat || '').toLowerCase().includes(q) ||
                           (item.jenis || '').toLowerCase().includes(q) ||
                           (item.brand || '').toLowerCase().includes(q) ||
+                          (item.kepemilikan || '').toLowerCase().includes(q) ||
                           (item.terminal || '').toLowerCase().includes(q);
             if (!match) return false;
         }
@@ -676,6 +677,7 @@ function renderTable() {
             <td class="p-3 font-bold text-slate-700">${item.jenis}</td>
             <td class="p-3 font-bold text-blue-900">${item.nomor_alat}</td>
             <td class="p-3">${item.brand || '-'}</td>
+            <td class="p-3">${milikBadge(item.kepemilikan)}</td>
             <td class="p-3 text-center">${item.tahun_pembuatan || '-'}</td>
             <td class="p-3 text-center">${ageBadge}</td>
             <td class="p-3">${energyBadge}</td>
@@ -686,6 +688,27 @@ function renderTable() {
     });
 }
 
+// ---------- Kepemilikan alat ----------
+const MILIK_OPTIONS = ['IPC TPK', 'Pelindo', 'Mitra', 'Sewa'];
+function milikOf(d) { return d && d.kepemilikan && d.kepemilikan !== '-' ? d.kepemilikan : 'Belum Diisi'; }
+function milikBadge(v) {
+    const m = milikOf({ kepemilikan: v });
+    const cls = { 'IPC TPK': 'bg-blue-50 text-blue-800', 'Pelindo': 'bg-indigo-50 text-indigo-700', 'Mitra': 'bg-teal-50 text-teal-700', 'Sewa': 'bg-amber-50 text-amber-800' }[m] || 'bg-slate-100 text-slate-500';
+    return `<span class="px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${cls}">${m}</span>`;
+}
+function setMilikInput(v) {
+    const sel = document.getElementById('inMilik');
+    if (!sel) return;
+    const m = milikOf({ kepemilikan: v });
+    if (![...sel.options].some(o => o.value === m)) sel.add(new Option(m, m), sel.options.length - 1);   // nilai lama di luar daftar tetap tampil
+    sel.value = m;
+}
+function readMilikInput() {
+    const sel = document.getElementById('inMilik');
+    if (!sel) return {};
+    return { kepemilikan: sel.value === 'Belum Diisi' ? null : sel.value };
+}
+
 function openModal() {
     document.getElementById('editId').value = '';
     document.getElementById('inJenis').value = '';
@@ -693,6 +716,7 @@ function openModal() {
     document.getElementById('inBrand').value = '';
     document.getElementById('inTahun').value = '';
     document.getElementById('inEnergi').value = 'BBM';
+    setMilikInput('IPC TPK');
     setSpecInputs({});
     document.getElementById('modalTitle').innerText = 'Tambah Data Alat Baru';
     document.getElementById('modalForm').classList.remove('hidden');
@@ -709,6 +733,7 @@ function openEditModal(item) {
     document.getElementById('inTahun').value = item.tahun_pembuatan || '';
     document.getElementById('inEnergi').value = item.sumber_energi || 'BBM';
     document.getElementById('inStatus').value = item.status || 'Operasional';
+    setMilikInput(item.kepemilikan);
     setSpecInputs(item);
     document.getElementById('modalTitle').innerText = `Edit Data Alat: ${item.nomor_alat}`;
     document.getElementById('modalForm').classList.remove('hidden');
@@ -776,7 +801,7 @@ async function saveAlat() {
 
     const spec = readSpecInputs();
     if (spec.error) { alert(spec.error); return; }
-    Object.assign(payload, spec.data);
+    Object.assign(payload, spec.data, readMilikInput());
 
     const res = id 
         ? await supabaseClient.from('peralatan').update(payload).eq('id', id)
@@ -802,9 +827,9 @@ async function deleteAlat(id) {
 
 function exportCSV() {
     const rows = (typeof getExportRows === 'function') ? getExportRows() : getActiveDataset();
-    const headers = ['Terminal', 'Kategori', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status', 'Size Type', 'Span (m)', 'Outreach (m)', 'SWL (ton)'];
+    const headers = ['Terminal', 'Kategori', 'Jenis', 'Nomor Alat', 'Brand', 'Tahun Pembuatan', 'Sumber Energi', 'Status', 'Size Type', 'Span (m)', 'Outreach (m)', 'SWL (ton)', 'Milik'];
     const val = v => (v === null || v === undefined ? '' : v);
-    const lines = rows.map(d => [d.terminal, d.kategori4, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan, d.sumber_energi, d.status, d.size_type, d.span, d.outreach, d.swl]
+    const lines = rows.map(d => [d.terminal, d.kategori4, d.jenis, d.nomor_alat, d.brand, d.tahun_pembuatan, d.sumber_energi, d.status, d.size_type, d.span, d.outreach, d.swl, milikOf(d)]
         .map(v => `"${String(val(v)).replace(/"/g, '""')}"`).join(','));
     const csv = '\uFEFF' + [headers.join(','), ...lines].join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -960,7 +985,7 @@ async function buildExcel(ExcelJS, data) {
 
     // ================= DATABASE ALAT =================
     const COLS = [['No', 6], ['Terminal', 16], ['Kategori Alat', 20], ['Kode Jenis', 10], ['Nama Jenis Alat', 24], ['Nomor Alat', 18], ['Brand / Tipe', 26],
-        ['Tahun Pembuatan', 11], ['Usia (th)', 9], ['Kelompok Usia', 17], ['Status Alat', 16], ['Sumber Energi', 14], ['Size Type', 15], ['Span (m)', 10], ['Outreach (m)', 11], ['SWL (ton)', 10]];
+        ['Tahun Pembuatan', 11], ['Usia (th)', 9], ['Kelompok Usia', 17], ['Status Alat', 16], ['Sumber Energi', 14], ['Size Type', 15], ['Span (m)', 10], ['Outreach (m)', 11], ['SWL (ton)', 10], ['Milik', 13]];
     const NC = COLS.length, lastL = db.getColumn(NC).letter;
     COLS.forEach(([, w], i) => { db.getColumn(i + 1).width = w; });
     db.mergeCells(`A1:${lastL}1`);
@@ -989,7 +1014,7 @@ async function buildExcel(ExcelJS, data) {
         columns: COLS.map(([name]) => ({ name, filterButton: true })),
         rows: sorted.map((d, i) => [i + 1, d.terminal, d.kategori4, d.jenis, NAMA_JENIS[d.jenis] || d.jenis, d.nomor_alat, nn(d.brand),
             nn(d.tahun_pembuatan), usiaOf(d), kelompokUsia(d), d.status || 'Belum Diisi', energiOf(d), nn(d.size_type),
-            nn(d.span) === null ? null : Number(d.span), nn(d.outreach) === null ? null : Number(d.outreach), nn(d.swl) === null ? null : Number(d.swl)])
+            nn(d.span) === null ? null : Number(d.span), nn(d.outreach) === null ? null : Number(d.outreach), nn(d.swl) === null ? null : Number(d.swl), milikOf(d)])
     });
     const hdr = db.getRow(HDR);
     hdr.height = 32;
@@ -999,7 +1024,7 @@ async function buildExcel(ExcelJS, data) {
         c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         c.border = { left: thin('FF2A3F66'), right: thin('FF2A3F66') };
     });
-    const center = new Set([1, 4, 8, 9, 10, 11, 12, 13]);
+    const center = new Set([1, 4, 8, 9, 10, 11, 12, 13, 17]);
     const ageFill = { [AGE_LABELS[0]]: ['FFE7F6EE', 'FF047857'], [AGE_LABELS[1]]: ['FFE6EEFB', 'FF1D4ED8'], [AGE_LABELS[2]]: ['FFFDE8EC', RED] };
     const statFill = { 'Operasional': ['FFE7F6EE', 'FF047857'], 'Non Operasional': ['FFFDE8EC', RED], 'Belum Diisi': ['FFF1F5F9', MUTED] };
     sorted.forEach((d, i) => {
